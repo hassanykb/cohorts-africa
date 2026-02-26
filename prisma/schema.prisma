@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+enum Role {
+  MENTOR
+  MENTEE
+  ADMIN
+  SPONSOR
+}
+
+enum CircleStatus {
+  PROPOSED
+  OPEN
+  ACTIVE
+  COMPLETED
+}
+
+enum AppStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model User {
+  id               String        @id @default(cuid())
+  role             Role          @default(MENTEE)
+  name             String
+  email            String        @unique
+  linkedinUrl      String?
+  reputationScore  Int           @default(100)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // A user can create a circle (as a mentee proposing or a mentor leading)
+  circlesCreated   Circle[]      @relation("CreatedCircles")
+  
+  // A user can be the official assigned mentor of a circle
+  circlesMentoring Circle[]      @relation("MentoringCircles")
+  
+  // Applications submitted by this user
+  applications     Application[]
+}
+
+model Circle {
+  id          String       @id @default(cuid())
+  creatorId   String
+  mentorId    String?
+  title       String
+  description String       @db.Text
+  maxCapacity Int
+  status      CircleStatus @default(PROPOSED)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  creator      User          @relation("CreatedCircles", fields: [creatorId], references: [id])
+  mentor       User?         @relation("MentoringCircles", fields: [mentorId], references: [id])
+  applications Application[]
+  sessions     Session[]
+}
+
+model Application {
+  id              String    @id @default(cuid())
+  circleId        String
+  menteeId        String
+  intentStatement String    @db.Text
+  status          AppStatus @default(PENDING)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  circle Circle @relation(fields: [circleId], references: [id])
+  mentee User   @relation(fields: [menteeId], references: [id])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  circleId  String
+  startTime DateTime
+  endTime   DateTime
+  videoLink String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  circle Circle @relation(fields: [circleId], references: [id])
+}
