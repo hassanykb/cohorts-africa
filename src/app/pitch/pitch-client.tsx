@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Globe2, ArrowLeft, UserPlus, Info, CheckCircle2, UserCheck, UserX } from "lucide-react";
+import { Globe2, ArrowLeft, UserPlus, Info, CheckCircle2, UserCheck, UserX, PlusCircle } from "lucide-react";
 import { useState, useTransition, useOptimistic } from "react";
-import { submitPitch, followMentor, unfollowMentor, type MentorWithFollow } from "@/lib/actions";
+import { submitPitch, followMentor, unfollowMentor, searchUsers, type MentorWithFollow } from "@/lib/actions";
 
 const TAGS = [
     "Career Pivot", "FinTech", "Product Management", "Engineering",
@@ -34,6 +34,10 @@ export default function PitchClient({
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState("");
     const [isPending, startTransition] = useTransition();
+    const [customTag, setCustomTag] = useState("");
+    const [peerQuery, setPeerQuery] = useState("");
+    const [peerSuggestions, setPeerSuggestions] = useState<{ id: string; name: string; email: string }[]>([]);
+    const [invitedPeers, setInvitedPeers] = useState<{ id?: string; name?: string; email: string }[]>([]);
 
     // Optimistic follow state so the UI feels instant
     const [optimisticMentors, updateOptimistic] = useOptimistic(
@@ -58,6 +62,40 @@ export default function PitchClient({
             }
         });
     }
+
+    const addCustomTag = () => {
+        if (!customTag.trim()) return;
+        if (selectedTags.length >= 5) {
+            setError("You can only select up to 5 focus areas.");
+            return;
+        }
+        if (!selectedTags.includes(customTag.trim())) {
+            setSelectedTags([...selectedTags, customTag.trim()]);
+        }
+        setCustomTag("");
+    };
+
+    const handlePeerSearch = async (val: string) => {
+        setPeerQuery(val);
+        if (val.length < 2) {
+            setPeerSuggestions([]);
+            return;
+        }
+        const results = await searchUsers(val);
+        setPeerSuggestions(results.filter(u => u.id !== userId && !invitedPeers.find(p => p.email === u.email)));
+    };
+
+    const addPeer = (peer: { id?: string; name?: string; email: string }) => {
+        if (!invitedPeers.find(p => p.email === peer.email)) {
+            setInvitedPeers([...invitedPeers, peer]);
+        }
+        setPeerQuery("");
+        setPeerSuggestions([]);
+    };
+
+    const removePeer = (email: string) => {
+        setInvitedPeers(invitedPeers.filter(p => p.email !== email));
+    };
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -176,6 +214,23 @@ export default function PitchClient({
                                         {tag}
                                     </button>
                                 ))}
+                            </div>
+                            <div className="flex gap-2 mt-3">
+                                <input
+                                    type="text"
+                                    value={customTag}
+                                    onChange={(e) => setCustomTag(e.target.value)}
+                                    placeholder="Add custom... (e.g. AI Safety)"
+                                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={addCustomTag}
+                                    className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200"
+                                >
+                                    Add
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -307,16 +362,57 @@ export default function PitchClient({
                             <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">3</span>
                             Invite Peers
                         </h2>
+
+                        {/* Selected Peers */}
+                        {invitedPeers.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {invitedPeers.map((peer) => (
+                                    <div key={peer.email} className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100">
+                                        <span>{peer.name || peer.email}</span>
+                                        <button type="button" onClick={() => removePeer(peer.email)} className="hover:text-rose-500">×</button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
                         <div className="relative">
                             <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="friend@email.com, another@email.com..."
+                                value={peerQuery}
+                                onChange={(e) => handlePeerSearch(e.target.value)}
+                                placeholder="Search by name or enter email..."
                                 className="block w-full pl-9 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && peerQuery.includes("@")) {
+                                        e.preventDefault();
+                                        addPeer({ email: peerQuery });
+                                    }
+                                }}
                             />
+
+                            {/* Suggestions Dropdown */}
+                            {peerSuggestions.length > 0 && (
+                                <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                                    {peerSuggestions.map((u) => (
+                                        <button
+                                            key={u.id}
+                                            type="button"
+                                            onClick={() => addPeer(u)}
+                                            className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 flex items-center justify-between group"
+                                        >
+                                            <div>
+                                                <p className="font-semibold text-slate-900">{u.name}</p>
+                                                <p className="text-xs text-slate-500">{u.email}</p>
+                                            </div>
+                                            <PlusCircle className="w-4 h-4 text-slate-300 group-hover:text-indigo-600" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <p className="text-xs text-slate-400 flex items-center gap-1">
-                            <Info className="w-3 h-3" /> Separate emails with commas. Aim for at least 4 others.
+                            <Info className="w-3 h-3" /> People you invite will receive an email to join this circle.
                         </p>
                     </div>
 

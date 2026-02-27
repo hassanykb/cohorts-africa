@@ -14,11 +14,21 @@ const TAGS = [
 
 export default function CreateCircle() {
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [customTag, setCustomTag] = useState("");
 
     const toggleTag = (tag: string) => {
         setSelectedTags((prev) =>
             prev.includes(tag) ? prev.filter((t) => t !== tag) : prev.length < 5 ? [...prev, tag] : prev
         );
+    };
+
+    const addCustomTag = () => {
+        if (!customTag.trim()) return;
+        if (selectedTags.length >= 5) return;
+        if (!selectedTags.includes(customTag.trim())) {
+            setSelectedTags([...selectedTags, customTag.trim()]);
+        }
+        setCustomTag("");
     };
 
     return (
@@ -93,6 +103,23 @@ export default function CreateCircle() {
                                     {tag}
                                 </button>
                             ))}
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                            <input
+                                type="text"
+                                value={customTag}
+                                onChange={(e) => setCustomTag(e.target.value)}
+                                placeholder="Add custom focus area..."
+                                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }}
+                            />
+                            <button
+                                type="button"
+                                onClick={addCustomTag}
+                                className="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-200"
+                            >
+                                Add
+                            </button>
                         </div>
                     </div>
 

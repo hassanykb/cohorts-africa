@@ -21,7 +21,10 @@ export async function updateProfile(userId: string, data: {
         })
         .eq("id", userId);
 
-    if (error) throw error;
+    if (error) {
+        console.error("Update Profile Error:", error);
+        throw new Error(error.message || "Failed to save changes.");
+    }
     revalidatePath("/profile");
     revalidatePath("/dashboard/mentee");
     revalidatePath("/dashboard/mentor");

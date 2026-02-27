@@ -140,7 +140,7 @@ export async function upsertUser(user: {
     id: string;
     email: string;
     name: string;
-    role?: "MENTOR" | "MENTEE";
+    role?: "MENTOR" | "MENTEE" | "BOTH";
 }) {
     const supabase = createServerClient();
     const now = new Date().toISOString();
@@ -228,5 +228,17 @@ export async function unfollowMentor(followerId: string, mentorId: string) {
         .eq("mentorId", mentorId);
     if (error) throw error;
     revalidatePath("/pitch");
+}
+
+export async function searchUsers(query: string) {
+    const supabase = createServerClient();
+    const { data, error } = await supabase
+        .from("User")
+        .select("id, name, email")
+        .or(`name.ilike.%${query}%,email.ilike.%${query}%`)
+        .limit(10);
+
+    if (error) throw error;
+    return data ?? [];
 }
 
