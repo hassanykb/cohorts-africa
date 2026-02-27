@@ -127,13 +127,13 @@ export async function getDraftCirclesByCreator(creatorId: string) {
     const supabase = createServerClient();
     const { data, error } = await supabase
         .from("Circle")
-        .select("id, title, description, updatedAt, mentorId")
+        .select("id, title, description, updatedAt, mentorId, status")
         .eq("creatorId", creatorId)
-        .eq("status", "DRAFT")
         .order("updatedAt", { ascending: false });
 
     if (error) throw error;
-    return data ?? [];
+
+    return (data ?? []).filter((circle: { status?: string }) => circle.status === "DRAFT");
 }
 
 export async function submitApplication(circleId: string, menteeId: string, intentStatement: string) {

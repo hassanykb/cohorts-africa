@@ -25,10 +25,20 @@ export default async function MenteeDashboard() {
     if (!user) redirect("/login");
     if (user.role === "MENTOR") redirect("/dashboard/mentor");
 
-    const [applications, drafts] = await Promise.all([
+    const [applicationsResult, draftsResult] = await Promise.allSettled([
         getApplicationsByMentee(user.id),
         getDraftCirclesByCreator(user.id),
     ]);
+    if (applicationsResult.status === "rejected") {
+        console.error("Mentee dashboard: failed to load applications", applicationsResult.reason);
+    }
+    if (draftsResult.status === "rejected") {
+        console.error("Mentee dashboard: failed to load drafts", draftsResult.reason);
+    }
+
+    const applications = applicationsResult.status === "fulfilled" ? applicationsResult.value : [];
+    const drafts = draftsResult.status === "fulfilled" ? draftsResult.value : [];
+
     const active = applications.filter((a: Record<string, unknown>) => a.status === "ACCEPTED");
     const pending = applications.filter((a: Record<string, unknown>) => a.status === "PENDING" || a.status === "REJECTED");
     const score = scoreColor(user.reputationScore);
