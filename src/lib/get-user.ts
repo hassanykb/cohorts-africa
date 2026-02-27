@@ -6,8 +6,10 @@ export type AppUser = {
     id: string;
     email: string;
     name: string;
-    role: "MENTOR" | "MENTEE" | "ADMIN" | "SPONSOR";
+    role: "MENTOR" | "MENTEE" | "ADMIN" | "SPONSOR" | "BOTH";
     reputationScore: number;
+    bio: string | null;
+    linkedinUrl: string | null;
 };
 
 /**
