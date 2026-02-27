@@ -7,6 +7,7 @@ import {
 import { getUser } from "@/lib/get-user";
 import { getApplicationsByMentee } from "@/lib/actions";
 import ProfileMenu from "@/components/ProfileMenu";
+import BrandLogo from "@/components/BrandLogo";
 
 function initials(name: string) {
     return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
@@ -34,12 +35,7 @@ export default async function MenteeDashboard() {
             <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
-                        <Link href="/" className="font-bold text-xl tracking-tight flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-                                <Globe2 className="w-5 h-5 text-white" />
-                            </div>
-                            Cohorts.Africa
-                        </Link>
+                        <BrandLogo role={user.role} />
                         <div className="hidden md:flex items-center gap-6 text-sm font-medium">
                             <Link href="/dashboard/mentee" className="text-indigo-600">My Dashboard</Link>
                             <Link href="/explore" className="text-slate-600 hover:text-indigo-600 transition-colors">Explore Circles</Link>
@@ -55,6 +51,7 @@ export default async function MenteeDashboard() {
                                 email={user.email}
                                 initials={initials(user.name)}
                                 role={user.role}
+                                avatarUrl={user?.avatarUrl}
                             />
                         </div>
                     </div>

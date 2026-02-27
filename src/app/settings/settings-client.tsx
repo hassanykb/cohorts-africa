@@ -14,6 +14,7 @@ type User = {
     role: string;
     bio: string | null;
     linkedinUrl: string | null;
+    avatarUrl: string | null;
     reputationScore: number;
 };
 
@@ -42,6 +43,7 @@ export default function SettingsClient({ user }: { user: User }) {
     const [name, setName] = useState(user.name);
     const [bio, setBio] = useState(user.bio ?? "");
     const [linkedinUrl, setLinkedinUrl] = useState(user.linkedinUrl ?? "");
+    const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? "");
     const [role, setRole] = useState<Role>((user.role as Role) ?? "MENTEE");
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState("");
@@ -53,7 +55,7 @@ export default function SettingsClient({ user }: { user: User }) {
         setSaved(false);
         startTransition(async () => {
             try {
-                await updateProfile(user.id, { name, bio, linkedinUrl, role });
+                await updateProfile(user.id, { name, bio, linkedinUrl, avatarUrl, role });
                 setSaved(true);
                 setTimeout(() => setSaved(false), 3000);
             } catch (err: any) {
@@ -75,6 +77,43 @@ export default function SettingsClient({ user }: { user: User }) {
             <p className="text-slate-500 text-sm mb-8">Update your profile info and platform role.</p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Profile Picture Section */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <UserCheck className="w-5 h-5 text-indigo-600" />
+                        Profile Picture
+                    </h2>
+                    <div className="flex items-center gap-5">
+                        <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-2xl overflow-hidden border-2 border-indigo-50">
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                user.name.slice(0, 2).toUpperCase()
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <input
+                                type="text"
+                                value={avatarUrl}
+                                onChange={(e) => setAvatarUrl(e.target.value)}
+                                placeholder="Paste image URL here..."
+                                className="w-full bg-white text-slate-900 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setAvatarUrl("")}
+                                    className="text-xs font-semibold text-rose-600 hover:text-rose-700 underline"
+                                >
+                                    Remove Photo
+                                </button>
+                                <span className="text-xs text-slate-300">|</span>
+                                <p className="text-xs text-slate-500">Synced from {user.email.includes("gmail") ? "Google" : "LinkedIn"}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Profile info */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
                     <h2 className="font-bold text-slate-800">Profile Info</h2>

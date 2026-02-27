@@ -10,6 +10,7 @@ export type AppUser = {
     reputationScore: number;
     bio: string | null;
     linkedinUrl: string | null;
+    avatarUrl: string | null;
 };
 
 /**
@@ -30,6 +31,7 @@ export async function getUser(): Promise<AppUser | null> {
         id: userId,
         email: session.user.email,
         name: session.user.name ?? session.user.email,
+        avatarUrl: session.user.image ?? null,
         role: "MENTEE",
         reputationScore: 75,
         createdAt: now,

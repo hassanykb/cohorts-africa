@@ -7,6 +7,7 @@ export async function updateProfile(userId: string, data: {
     name: string;
     bio: string;
     linkedinUrl: string;
+    avatarUrl?: string | null;
     role: "MENTOR" | "MENTEE" | "BOTH";
 }) {
     const supabase = createServerClient();
@@ -16,6 +17,7 @@ export async function updateProfile(userId: string, data: {
             name: data.name,
             bio: data.bio,
             linkedinUrl: data.linkedinUrl || null,
+            avatarUrl: data.avatarUrl || null,
             role: data.role,
             updatedAt: new Date().toISOString(),
         })

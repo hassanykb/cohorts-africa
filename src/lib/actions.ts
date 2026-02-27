@@ -141,6 +141,7 @@ export async function upsertUser(user: {
     email: string;
     name: string;
     role?: "MENTOR" | "MENTEE" | "BOTH";
+    avatarUrl?: string | null;
 }) {
     const supabase = createServerClient();
     const now = new Date().toISOString();
@@ -149,6 +150,7 @@ export async function upsertUser(user: {
         id: user.id,
         email: user.email,
         name: user.name,
+        avatarUrl: user.avatarUrl,
         role: user.role ?? "MENTEE",
         reputationScore: 75,
         createdAt: now,
@@ -195,7 +197,7 @@ export async function getMentorsWithFollowStatus(viewerId: string): Promise<Ment
     const supabase = createServerClient();
 
     const [{ data: mentors }, { data: follows }] = await Promise.all([
-        supabase.from("User").select("id, name, email, linkedinUrl, bio").eq("role", "MENTOR"),
+        supabase.from("User").select("id, name, email, linkedinUrl, bio, avatarUrl").eq("role", "MENTOR"),
         supabase.from("Follow").select("mentorId").eq("followerId", viewerId),
     ]);
 

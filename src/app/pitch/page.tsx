@@ -9,5 +9,5 @@ export default async function PitchPage() {
 
     const mentors = await getMentorsWithFollowStatus(user.id);
 
-    return <PitchClient userId={user.id} mentors={mentors} />;
+    return <PitchClient userId={user.id} userRole={user.role} mentors={mentors} />;
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Globe2, ArrowLeft, UserPlus, Info, CheckCircle2, UserCheck, UserX, PlusCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Info, PlusCircle, UserCheck, UserPlus, UserX, Users, Calendar, MessageSquare, Plus, FileText, ExternalLink, Video, Clock, MapPin, Search, Filter, ArrowRight, Share2, Globe } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import { useState, useTransition, useOptimistic } from "react";
 import { submitPitch, followMentor, unfollowMentor, searchUsers, type MentorWithFollow } from "@/lib/actions";
 
@@ -22,9 +23,11 @@ const MENTOR_TAGS: Record<string, string[]> = {
 
 export default function PitchClient({
     userId,
+    userRole,
     mentors,
 }: {
     userId: string;
+    userRole: string;
     mentors: MentorWithFollow[];
 }) {
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -138,12 +141,7 @@ export default function PitchClient({
             {/* Nav */}
             <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
-                    <Link href="/" className="font-bold text-xl flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-                            <Globe2 className="w-5 h-5 text-white" />
-                        </div>
-                        Cohorts.Africa
-                    </Link>
+                    <BrandLogo role={userRole} />
                     <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-sm">
                         {userId.slice(0, 2).toUpperCase()}
                     </div>

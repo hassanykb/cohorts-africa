@@ -48,7 +48,7 @@ export default async function MentorDashboard() {
                             <Link href="/dashboard/mentor" className="text-indigo-600">My Dashboard</Link>
                             <Link href="/explore" className="text-slate-600 hover:text-indigo-600 transition-colors">Explore Circles</Link>
                         </div>
-                        <ProfileMenu name={user.name} email={user.email} initials={initials(user.name)} role={user.role} />
+                        <ProfileMenu name={user.name} email={user.email} initials={initials(user.name)} role={user.role} avatarUrl={user.avatarUrl} />
                     </div>
                 </div>
             </nav>
@@ -97,8 +97,8 @@ export default async function MentorDashboard() {
                                         <div key={circle.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-start justify-between hover:shadow-md transition-shadow">
                                             <div className="flex-1 min-w-0">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${circle.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800"
-                                                        : circle.status === "OPEN" ? "bg-indigo-100 text-indigo-800"
-                                                            : "bg-slate-100 text-slate-500"
+                                                    : circle.status === "OPEN" ? "bg-indigo-100 text-indigo-800"
+                                                        : "bg-slate-100 text-slate-500"
                                                     }`}>
                                                     {circle.status as string}
                                                 </span>

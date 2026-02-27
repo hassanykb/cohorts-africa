@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Globe2, ArrowLeft, Info } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import { useState } from "react";
 
 const TAGS = [
@@ -37,12 +38,7 @@ export default function CreateCircle() {
             <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
-                        <Link href="/" className="font-bold text-xl tracking-tight flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-                                <Globe2 className="w-5 h-5 text-white" />
-                            </div>
-                            Cohorts.Africa
-                        </Link>
+                        <BrandLogo />
                         <div className="w-9 h-9 rounded-full bg-indigo-200 flex items-center justify-center font-bold text-indigo-700 text-sm border-2 border-white shadow-sm">
                             DO
                         </div>

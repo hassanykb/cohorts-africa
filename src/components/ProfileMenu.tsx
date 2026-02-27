@@ -10,9 +10,10 @@ type Props = {
     email: string;
     initials: string;
     role: string;
+    avatarUrl?: string | null;
 };
 
-export default function ProfileMenu({ name, email, initials, role }: Props) {
+export default function ProfileMenu({ name, email, initials, role, avatarUrl }: Props) {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
 
@@ -32,8 +33,12 @@ export default function ProfileMenu({ name, email, initials, role }: Props) {
                 className="flex items-center gap-1.5 group"
                 aria-label="Open profile menu"
             >
-                <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-sm shadow-sm group-hover:ring-2 group-hover:ring-indigo-400 group-hover:ring-offset-1 transition-all">
-                    {initials}
+                <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-sm shadow-sm group-hover:ring-2 group-hover:ring-indigo-400 group-hover:ring-offset-1 transition-all overflow-hidden">
+                    {avatarUrl ? (
+                        <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+                    ) : (
+                        initials
+                    )}
                 </div>
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
             </button>
@@ -42,8 +47,12 @@ export default function ProfileMenu({ name, email, initials, role }: Props) {
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                     {/* Profile header */}
                     <div className="px-4 py-4 border-b border-slate-100 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-sm flex-shrink-0">
-                            {initials}
+                        <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-sm flex-shrink-0 overflow-hidden">
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+                            ) : (
+                                initials
+                            )}
                         </div>
                         <div className="min-w-0">
                             <p className="font-semibold text-slate-900 text-sm truncate">{name}</p>

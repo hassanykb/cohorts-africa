@@ -17,6 +17,20 @@ export const authOptions: AuthOptions = {
         signIn: "/login",
     },
     callbacks: {
+        async signIn({ user, account, profile }) {
+            if (!user.email || !user.id) return true;
+
+            // Sync user to DB on sign in
+            const { upsertUser } = await import("./actions");
+            await upsertUser({
+                id: user.id,
+                email: user.email,
+                name: user.name ?? "Anonymous",
+                // We don't want to overwrite the role if they already have one
+                // Role is handled in settings, but we can default it on first sign in
+            });
+            return true;
+        },
         async session({ session, token }) {
             if (session?.user) {
                 (session.user as { id?: string }).id = token.sub;

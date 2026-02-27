@@ -3,6 +3,7 @@ import { Search, Clock, Users, ArrowRight, Filter } from "lucide-react";
 import { createServerClient } from "@/lib/supabase-server";
 import { getUser } from "@/lib/get-user";
 import ProfileMenu from "@/components/ProfileMenu";
+import BrandLogo from "@/components/BrandLogo";
 
 async function getCircles() {
     const supabase = createServerClient();
@@ -20,16 +21,14 @@ function initials(name: string) {
 
 export default async function Explore() {
     const [circles, user] = await Promise.all([getCircles(), getUser()]);
+    const userRole = user?.role;
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
             <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
-                        <Link href="/" className="font-bold text-xl tracking-tight text-slate-900 flex items-center gap-2">
-                            <span className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold">CA</span>
-                            Cohorts.Africa
-                        </Link>
+                        <BrandLogo role={userRole} />
                         <div className="flex items-center gap-6">
                             <div className="hidden md:flex items-center gap-6 text-sm font-medium">
                                 <Link href="/explore" className="text-indigo-600">Explore</Link>
@@ -41,6 +40,7 @@ export default async function Explore() {
                                     email={user.email}
                                     initials={initials(user.name)}
                                     role={user.role}
+                                    avatarUrl={user.avatarUrl}
                                 />
                             )}
                             {!user && (
@@ -97,8 +97,8 @@ export default async function Explore() {
                                         <div className="mb-4">
                                             <div className="flex justify-between items-start mb-3">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isProposed ? "bg-amber-100 text-amber-800"
-                                                        : circle.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800"
-                                                            : "bg-indigo-100 text-indigo-800"
+                                                    : circle.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800"
+                                                        : "bg-indigo-100 text-indigo-800"
                                                     }`}>
                                                     {isProposed ? "Mentee Pitch" : circle.status}
                                                 </span>
@@ -128,8 +128,8 @@ export default async function Explore() {
                                             <Link
                                                 href={ctaHref}
                                                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isOpen
-                                                        ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                                                        : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                                                    ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                                                    : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
                                                     }`}
                                             >
                                                 {isOpen ? "Apply" : "Enter Room"} <ArrowRight className="w-3.5 h-3.5" />
