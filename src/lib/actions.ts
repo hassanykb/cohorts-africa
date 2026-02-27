@@ -145,13 +145,13 @@ export async function upsertUser(user: {
 }) {
     const supabase = createServerClient();
     const now = new Date().toISOString();
-    const persistedRole: "MENTOR" | "MENTEE" = user.role === "MENTOR" ? "MENTOR" : "MENTEE";
 
     const { error } = await supabase.from("User").upsert({
         id: user.id,
         email: user.email,
         name: user.name,
-        role: persistedRole,
+        avatarUrl: user.avatarUrl,
+        role: user.role ?? "MENTEE",
         reputationScore: 75,
         createdAt: now,
         updatedAt: now,
@@ -189,6 +189,8 @@ export type MentorWithFollow = {
     name: string;
     email: string;
     linkedinUrl: string | null;
+    bio: string | null;
+    avatarUrl: string | null;
     isFollowing: boolean;
 };
 
@@ -196,7 +198,7 @@ export async function getMentorsWithFollowStatus(viewerId: string): Promise<Ment
     const supabase = createServerClient();
 
     const [{ data: mentors }, { data: follows }] = await Promise.all([
-        supabase.from("User").select("id, name, email, linkedinUrl").eq("role", "MENTOR"),
+        supabase.from("User").select("id, name, email, linkedinUrl, bio, avatarUrl").in("role", ["MENTOR", "BOTH"]),
         supabase.from("Follow").select("mentorId").eq("followerId", viewerId),
     ]);
 

@@ -12,16 +12,15 @@ export async function updateProfile(userId: string, data: {
 }) {
     const supabase = createServerClient();
 
-    // Current DB enum supports MENTOR/MENTEE. "BOTH" is stored as MENTEE until enum is migrated.
-    const persistedRole: "MENTOR" | "MENTEE" = data.role === "MENTOR" ? "MENTOR" : "MENTEE";
-
     try {
         const { error } = await supabase
             .from("User")
             .update({
                 name: data.name,
+                bio: data.bio,
                 linkedinUrl: data.linkedinUrl || null,
-                role: persistedRole,
+                avatarUrl: data.avatarUrl || null,
+                role: data.role,
                 updatedAt: new Date().toISOString(),
             })
             .eq("id", userId);

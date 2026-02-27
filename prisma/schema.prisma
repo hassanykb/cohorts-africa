@@ -3,12 +3,13 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 enum Role {
   MENTOR
   MENTEE
+  BOTH
   ADMIN
   SPONSOR
 }
@@ -27,23 +28,25 @@ enum AppStatus {
 }
 
 model User {
-  id               String        @id @default(cuid())
-  role             Role          @default(MENTEE)
-  name             String
-  email            String        @unique
-  linkedinUrl      String?
-  reputationScore  Int           @default(100)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id              String   @id @default(cuid())
+  role            Role     @default(MENTEE)
+  name            String
+  email           String   @unique
+  bio             String?
+  linkedinUrl     String?
+  avatarUrl       String?
+  reputationScore Int      @default(100)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // A user can create a circle (as a mentee proposing or a mentor leading)
-  circlesCreated   Circle[]      @relation("CreatedCircles")
-  
+  circlesCreated Circle[] @relation("CreatedCircles")
+
   // A user can be the official assigned mentor of a circle
-  circlesMentoring Circle[]      @relation("MentoringCircles")
-  
+  circlesMentoring Circle[] @relation("MentoringCircles")
+
   // Applications submitted by this user
-  applications     Application[]
+  applications Application[]
 }
 
 model Circle {

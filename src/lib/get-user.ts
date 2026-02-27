@@ -26,12 +26,12 @@ export async function getUser(): Promise<AppUser | null> {
     const userId = (session.user as { id?: string }).id ?? session.user.email;
 
     // Upsert on every call ensures new OAuth sign-ins are always recorded.
-    // Keep payload aligned with live DB columns.
     try {
         await supabase.from("User").upsert({
             id: userId,
             email: session.user.email,
             name: session.user.name ?? session.user.email,
+            avatarUrl: session.user.image ?? null,
             role: "MENTEE",
             reputationScore: 75,
             updatedAt: now,
@@ -50,11 +50,5 @@ export async function getUser(): Promise<AppUser | null> {
         console.error("getUser: Select failure", selectError);
     }
 
-    if (!userData) return null;
-
-    return {
-        ...(userData as Omit<AppUser, "bio" | "avatarUrl">),
-        bio: (userData as { bio?: string | null }).bio ?? null,
-        avatarUrl: (userData as { avatarUrl?: string | null }).avatarUrl ?? null,
-    } as AppUser;
+    return userData as AppUser | null;
 }

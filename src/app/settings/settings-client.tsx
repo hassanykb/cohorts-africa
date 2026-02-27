@@ -210,7 +210,7 @@ export default function SettingsClient({ user }: { user: User }) {
 
                     {role === "BOTH" && (
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-                            ✦ <strong>Both</strong> is not fully enabled in this environment yet. Saving now falls back to <strong>Mentee</strong> until the role enum is migrated.
+                            ✦ As a <strong>Both</strong> member, you&apos;ll have access to both the Mentor Dashboard and Mentee Dashboard from your profile menu.
                         </div>
                     )}
                 </div>
