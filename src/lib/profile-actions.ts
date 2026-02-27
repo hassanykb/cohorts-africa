@@ -12,16 +12,16 @@ export async function updateProfile(userId: string, data: {
 }) {
     const supabase = createServerClient();
 
-    // In case 'BOTH' is not in the DB Enum yet, we might need a fallback or just handle the error
+    // Current DB enum supports MENTOR/MENTEE. "BOTH" is stored as MENTEE until enum is migrated.
+    const persistedRole: "MENTOR" | "MENTEE" = data.role === "MENTOR" ? "MENTOR" : "MENTEE";
+
     try {
         const { error } = await supabase
             .from("User")
             .update({
                 name: data.name,
-                bio: data.bio,
                 linkedinUrl: data.linkedinUrl || null,
-                avatarUrl: data.avatarUrl || null,
-                role: data.role === "BOTH" ? "MENTEE" : data.role, // Fallback to MENTEE if BOTH isn't in DB yet
+                role: persistedRole,
                 updatedAt: new Date().toISOString(),
             })
             .eq("id", userId);
@@ -30,9 +30,9 @@ export async function updateProfile(userId: string, data: {
             console.error("Update Profile Error:", { error, userId, data });
             throw new Error(error.message || "Failed to save changes.");
         }
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error("updateProfile: unexpected error", e);
-        throw new Error(e.message || "A database error occurred.");
+        throw new Error(e instanceof Error ? e.message : "A database error occurred.");
     }
 
     revalidatePath("/profile");
