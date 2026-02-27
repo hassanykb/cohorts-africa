@@ -23,7 +23,6 @@ function scoreColor(score: number) {
 export default async function MenteeDashboard() {
     const user = await getUser();
     if (!user) redirect("/login");
-    if (user.role === "MENTOR") redirect("/dashboard/mentor");
 
     const [applicationsResult, draftsResult] = await Promise.allSettled([
         getApplicationsByMentee(user.id),

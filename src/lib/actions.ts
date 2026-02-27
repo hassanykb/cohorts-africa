@@ -49,12 +49,12 @@ export async function getCirclesByMentor(mentorId: string) {
     return data ?? [];
 }
 
-export async function getPitchRequestsForMentor() {
+export async function getPitchRequestsForMentor(mentorId: string) {
     const supabase = createServerClient();
     const { data, error } = await supabase
         .from("Circle")
         .select("*, User!Circle_creatorId_fkey(name, email)")
-        .is("mentorId", null)
+        .eq("mentorId", mentorId)
         .eq("status", "PROPOSED")
         .order("createdAt", { ascending: false });
 
@@ -382,7 +382,7 @@ export async function upsertUser(user: {
         email: user.email,
         name: user.name,
         avatarUrl: user.avatarUrl,
-        role: user.role ?? "MENTEE",
+        role: user.role ?? "BOTH",
         reputationScore: 75,
         createdAt: now,
         updatedAt: now,
@@ -429,7 +429,7 @@ export async function getMentorsWithFollowStatus(viewerId: string): Promise<Ment
     const supabase = createServerClient();
 
     const [{ data: mentors }, { data: follows }] = await Promise.all([
-        supabase.from("User").select("id, name, email, linkedinUrl, bio, avatarUrl").in("role", ["MENTOR", "BOTH"]),
+        supabase.from("User").select("id, name, email, linkedinUrl, bio, avatarUrl").in("role", ["MENTOR", "MENTEE", "BOTH"]).neq("id", viewerId),
         supabase.from("Follow").select("mentorId").eq("followerId", viewerId),
     ]);
 

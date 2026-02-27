@@ -8,7 +8,6 @@ export async function updateProfile(userId: string, data: {
     bio: string;
     linkedinUrl: string;
     avatarUrl?: string | null;
-    role: "MENTOR" | "MENTEE" | "BOTH";
 }) {
     const supabase = createServerClient();
 
@@ -20,7 +19,7 @@ export async function updateProfile(userId: string, data: {
                 bio: data.bio,
                 linkedinUrl: data.linkedinUrl || null,
                 avatarUrl: data.avatarUrl || null,
-                role: data.role,
+                role: "BOTH",
                 updatedAt: new Date().toISOString(),
             })
             .eq("id", userId);

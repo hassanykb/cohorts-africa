@@ -1,7 +1,8 @@
 export function isMentorRole(role?: string | null): boolean {
-    return role === "MENTOR" || role === "BOTH";
+    return role === "MENTOR" || role === "MENTEE" || role === "BOTH";
 }
 
-export function getDefaultDashboardPath(role?: string | null): "/dashboard/mentor" | "/dashboard/mentee" {
-    return isMentorRole(role) ? "/dashboard/mentor" : "/dashboard/mentee";
+export function getDefaultDashboardPath(_role?: string | null): "/dashboard/mentee" {
+    void _role;
+    return "/dashboard/mentee";
 }

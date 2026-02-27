@@ -2,10 +2,8 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Save, UserCheck, BookOpen, Layers } from "lucide-react";
+import { ArrowLeft, Save, UserCheck } from "lucide-react";
 import { updateProfile } from "@/lib/profile-actions";
-
-type Role = "MENTOR" | "MENTEE" | "BOTH";
 
 type User = {
     id: string;
@@ -18,33 +16,11 @@ type User = {
     reputationScore: number;
 };
 
-const ROLE_OPTIONS: { value: Role; label: string; desc: string; icon: React.ReactNode }[] = [
-    {
-        value: "MENTEE",
-        label: "Mentee",
-        desc: "I want to join circles and learn from mentors.",
-        icon: <BookOpen className="w-5 h-5" />,
-    },
-    {
-        value: "MENTOR",
-        label: "Mentor",
-        desc: "I want to guide circles and share my expertise.",
-        icon: <UserCheck className="w-5 h-5" />,
-    },
-    {
-        value: "BOTH",
-        label: "Both",
-        desc: "I mentor others while still learning from peers.",
-        icon: <Layers className="w-5 h-5" />,
-    },
-];
-
 export default function SettingsClient({ user }: { user: User }) {
     const [name, setName] = useState(user.name);
     const [bio, setBio] = useState(user.bio ?? "");
     const [linkedinUrl, setLinkedinUrl] = useState(user.linkedinUrl ?? "");
     const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? "");
-    const [role, setRole] = useState<Role>((user.role as Role) ?? "MENTEE");
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState("");
     const [isPending, startTransition] = useTransition();
@@ -55,11 +31,11 @@ export default function SettingsClient({ user }: { user: User }) {
         setSaved(false);
         startTransition(async () => {
             try {
-                await updateProfile(user.id, { name, bio, linkedinUrl, avatarUrl, role });
+                await updateProfile(user.id, { name, bio, linkedinUrl, avatarUrl });
                 setSaved(true);
                 setTimeout(() => setSaved(false), 3000);
-            } catch (err: any) {
-                setError(err.message || "Failed to save. Please try again.");
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : "Failed to save. Please try again.");
             }
         });
     }
@@ -74,7 +50,7 @@ export default function SettingsClient({ user }: { user: User }) {
             </Link>
 
             <h1 className="text-2xl font-extrabold text-slate-900 mb-1">Settings</h1>
-            <p className="text-slate-500 text-sm mb-8">Update your profile info and platform role.</p>
+            <p className="text-slate-500 text-sm mb-8">Update your profile info.</p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Profile Picture Section */}
@@ -169,50 +145,18 @@ export default function SettingsClient({ user }: { user: User }) {
                     </div>
                 </div>
 
-                {/* Role selector */}
+                {/* Role mode */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
                     <div>
-                        <h2 className="font-bold text-slate-800">Platform Role</h2>
+                        <h2 className="font-bold text-slate-800">Platform Mode</h2>
                         <p className="text-sm text-slate-500 mt-0.5">
-                            You can be a mentee, a mentor, or both — your choice.
+                            Every account has both mentee and mentor capabilities.
                         </p>
                     </div>
 
-                    <div className="grid gap-3">
-                        {ROLE_OPTIONS.map((opt) => (
-                            <button
-                                key={opt.value}
-                                type="button"
-                                onClick={() => setRole(opt.value)}
-                                className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-all ${role === opt.value
-                                    ? "border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500"
-                                    : "border-slate-200 hover:border-indigo-300 bg-white"
-                                    }`}
-                            >
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${role === opt.value ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"
-                                    }`}>
-                                    {opt.icon}
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-sm text-slate-900 flex items-center gap-2">
-                                        {opt.label}
-                                        {role === opt.value && (
-                                            <span className="text-xs font-normal text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full">
-                                                Selected
-                                            </span>
-                                        )}
-                                    </p>
-                                    <p className="text-xs text-slate-500 mt-0.5">{opt.desc}</p>
-                                </div>
-                            </button>
-                        ))}
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-xs text-indigo-700">
+                        You can pitch as a <strong>Mentee</strong> or publish as a <strong>Mentor</strong> from the pitch flow.
                     </div>
-
-                    {role === "BOTH" && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
-                            ✦ As a <strong>Both</strong> member, you&apos;ll have access to both the Mentor Dashboard and Mentee Dashboard from your profile menu.
-                        </div>
-                    )}
                 </div>
 
                 {error && (

@@ -7,17 +7,15 @@ import {
 } from "lucide-react";
 import { getUser } from "@/lib/get-user";
 import { getCirclesByMentor, getPitchRequestsForMentor, acceptPitch, closeCircleApplications, declinePitch, reopenCircleApplications } from "@/lib/actions";
-import { isMentorRole } from "@/lib/roles";
 import AppNavbar from "@/components/AppNavbar";
 
 export default async function MentorDashboard() {
     const user = await getUser();
     if (!user) redirect("/login");
-    if (!isMentorRole(user.role)) redirect("/dashboard/mentee");
 
     const [circles, pitches] = await Promise.all([
         getCirclesByMentor(user.id),
-        getPitchRequestsForMentor(),
+        getPitchRequestsForMentor(user.id),
     ]);
 
     const active = circles.filter((c: Record<string, unknown>) => c.status === "ACTIVE" || c.status === "OPEN");

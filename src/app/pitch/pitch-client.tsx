@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Info, PlusCircle, UserCheck, UserPlus, UserX, Users, Calendar, MessageSquare, Plus, FileText, ExternalLink, Video, Clock, MapPin, Search, Filter, ArrowRight, Share2, Globe } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Info, PlusCircle, UserCheck, UserPlus, UserX } from "lucide-react";
 import { useState, useTransition, useOptimistic } from "react";
-import { submitPitch, savePitchDraft, followMentor, unfollowMentor, searchUsers, type MentorWithFollow } from "@/lib/actions";
+import { submitPitch, savePitchDraft, followMentor, unfollowMentor, searchUsers, createCircle, type MentorWithFollow } from "@/lib/actions";
 import AppNavbar from "@/components/AppNavbar";
 import { useRouter } from "next/navigation";
 
@@ -39,8 +39,10 @@ export default function PitchClient({
 }) {
     const router = useRouter();
     const userId = user.id;
+    const [pitchMode, setPitchMode] = useState<"MENTEE" | "MENTOR">("MENTEE");
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [selectedMentorId, setSelectedMentorId] = useState<string | null>(null);
+    const [capacity, setCapacity] = useState("10");
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [submitted, setSubmitted] = useState(false);
@@ -50,7 +52,7 @@ export default function PitchClient({
     const [peerQuery, setPeerQuery] = useState("");
     const [peerSuggestions, setPeerSuggestions] = useState<{ id: string; name: string; email: string }[]>([]);
     const [invitedPeers, setInvitedPeers] = useState<{ id?: string; name?: string; email: string }[]>([]);
-    const [pendingAction, setPendingAction] = useState<"submit" | "draft" | null>(null);
+    const [pendingAction, setPendingAction] = useState<"submit" | "publish" | "draft" | null>(null);
 
     // Optimistic follow state so the UI feels instant
     const [optimisticMentors, updateOptimistic] = useOptimistic(
@@ -113,12 +115,25 @@ export default function PitchClient({
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError("");
-        if (!selectedMentorId) { setError("Please select a mentor you follow."); return; }
-        setPendingAction("submit");
+        if (pitchMode === "MENTEE" && !selectedMentorId) {
+            setError("Please select a mentor you follow.");
+            return;
+        }
+        setPendingAction(pitchMode === "MENTOR" ? "publish" : "submit");
         startTransition(async () => {
             try {
-                await submitPitch({ creatorId: userId, mentorId: selectedMentorId, title, description, tags: selectedTags });
-                setSubmitted(true);
+                if (pitchMode === "MENTOR") {
+                    const formData = new FormData();
+                    formData.set("title", title);
+                    formData.set("description", description);
+                    formData.set("capacity", capacity);
+                    const id = await createCircle(formData, userId);
+                    router.push(`/circles/${id}`);
+                    router.refresh();
+                } else {
+                    await submitPitch({ creatorId: userId, mentorId: selectedMentorId!, title, description, tags: selectedTags });
+                    setSubmitted(true);
+                }
             } catch (err: unknown) {
                 setPendingAction(null);
                 setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -131,12 +146,20 @@ export default function PitchClient({
         setPendingAction("draft");
         startTransition(async () => {
             try {
-                await savePitchDraft({
-                    creatorId: userId,
-                    mentorId: selectedMentorId,
-                    title,
-                    description,
-                });
+                if (pitchMode === "MENTOR") {
+                    const formData = new FormData();
+                    formData.set("title", title);
+                    formData.set("description", description);
+                    formData.set("capacity", capacity);
+                    await createCircle(formData, userId, { asDraft: true });
+                } else {
+                    await savePitchDraft({
+                        creatorId: userId,
+                        mentorId: selectedMentorId,
+                        title,
+                        description,
+                    });
+                }
                 router.push("/dashboard/mentee");
                 router.refresh();
             } catch (err: unknown) {
@@ -178,11 +201,32 @@ export default function PitchClient({
                 </Link>
 
                 <div className="mb-6">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 mb-3">
-                        🔥 Mentee-Initiated Circle
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold mb-3 ${pitchMode === "MENTEE" ? "bg-amber-100 text-amber-800" : "bg-indigo-100 text-indigo-800"}`}>
+                        {pitchMode === "MENTEE" ? "🔥 Mentee-Initiated Circle" : "🧭 Mentor-Led Circle"}
                     </span>
                     <h1 className="text-3xl font-extrabold text-slate-900 mb-1">Pitch a Custom Circle</h1>
-                    <p className="text-slate-500">Organize a group and pitch to a mentor you follow.</p>
+                    <p className="text-slate-500">
+                        {pitchMode === "MENTEE"
+                            ? "Organize a group and pitch to a mentor you follow."
+                            : "Publish your own circle and define the structure directly."}
+                    </p>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-2 mb-6 inline-flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setPitchMode("MENTEE")}
+                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${pitchMode === "MENTEE" ? "bg-amber-100 text-amber-800" : "text-slate-600 hover:bg-slate-100"}`}
+                    >
+                        Pitch as Mentee
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setPitchMode("MENTOR")}
+                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${pitchMode === "MENTOR" ? "bg-indigo-100 text-indigo-700" : "text-slate-600 hover:bg-slate-100"}`}
+                    >
+                        Publish as Mentor
+                    </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -207,14 +251,16 @@ export default function PitchClient({
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                                Why does your group need this? <span className="text-rose-500">*</span>
+                                {pitchMode === "MENTEE" ? "Why does your group need this?" : "What outcome will your circle deliver?"} <span className="text-rose-500">*</span>
                             </label>
                             <textarea
                                 required
                                 rows={3}
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                placeholder="What problem is your group facing, and why is this mentor the right guide?"
+                                placeholder={pitchMode === "MENTEE"
+                                    ? "What problem is your group facing, and why is this mentor the right guide?"
+                                    : "Describe the skills, frameworks, and outcomes participants should expect."}
                                 className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400 resize-none bg-white text-slate-900"
                             />
                         </div>
@@ -266,10 +312,28 @@ export default function PitchClient({
                                 </button>
                             </div>
                         </div>
+                        {pitchMode === "MENTOR" && (
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                                    Max Participants <span className="text-rose-500">*</span>
+                                </label>
+                                <select
+                                    value={capacity}
+                                    onChange={(e) => setCapacity(e.target.value)}
+                                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900"
+                                >
+                                    {[5, 8, 10, 12, 15].map((n) => (
+                                        <option key={n} value={String(n)}>{n} participants</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     {/* Step 2 — Choose a mentor */}
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
+                    {pitchMode === "MENTEE" && (
+                        <>
+                            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h2 className="font-bold text-slate-800 flex items-center gap-2">
                                 <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">2</span>
@@ -387,67 +451,69 @@ export default function PitchClient({
                                 Follow at least one mentor above to unlock pitching.
                             </p>
                         )}
-                    </div>
-
-                    {/* Step 3 — Invite peers */}
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
-                        <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">3</span>
-                            Invite Peers
-                        </h2>
-
-                        {/* Selected Peers */}
-                        {invitedPeers.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-3">
-                                {invitedPeers.map((peer) => (
-                                    <div key={peer.email} className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100">
-                                        <span>{peer.name || peer.email}</span>
-                                        <button type="button" onClick={() => removePeer(peer.email)} className="hover:text-rose-500">×</button>
-                                    </div>
-                                ))}
                             </div>
-                        )}
 
-                        <div className="relative">
-                            <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input
-                                type="text"
-                                value={peerQuery}
-                                onChange={(e) => handlePeerSearch(e.target.value)}
-                                placeholder="Search by name or enter email..."
-                                className="block w-full pl-9 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" && peerQuery.includes("@")) {
-                                        e.preventDefault();
-                                        addPeer({ email: peerQuery });
-                                    }
-                                }}
-                            />
+                            {/* Step 3 — Invite peers */}
+                            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
+                            <h2 className="font-bold text-slate-800 flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">3</span>
+                                Invite Peers
+                            </h2>
 
-                            {/* Suggestions Dropdown */}
-                            {peerSuggestions.length > 0 && (
-                                <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
-                                    {peerSuggestions.map((u) => (
-                                        <button
-                                            key={u.id}
-                                            type="button"
-                                            onClick={() => addPeer(u)}
-                                            className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 flex items-center justify-between group"
-                                        >
-                                            <div>
-                                                <p className="font-semibold text-slate-900">{u.name}</p>
-                                                <p className="text-xs text-slate-500">{u.email}</p>
-                                            </div>
-                                            <PlusCircle className="w-4 h-4 text-slate-300 group-hover:text-indigo-600" />
-                                        </button>
+                            {/* Selected Peers */}
+                            {invitedPeers.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {invitedPeers.map((peer) => (
+                                        <div key={peer.email} className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100">
+                                            <span>{peer.name || peer.email}</span>
+                                            <button type="button" onClick={() => removePeer(peer.email)} className="hover:text-rose-500">×</button>
+                                        </div>
                                     ))}
                                 </div>
                             )}
-                        </div>
-                        <p className="text-xs text-slate-400 flex items-center gap-1">
-                            <Info className="w-3 h-3" /> People you invite will receive an email to join this circle.
-                        </p>
-                    </div>
+
+                            <div className="relative">
+                                <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={peerQuery}
+                                    onChange={(e) => handlePeerSearch(e.target.value)}
+                                    placeholder="Search by name or enter email..."
+                                    className="block w-full pl-9 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && peerQuery.includes("@")) {
+                                            e.preventDefault();
+                                            addPeer({ email: peerQuery });
+                                        }
+                                    }}
+                                />
+
+                                {/* Suggestions Dropdown */}
+                                {peerSuggestions.length > 0 && (
+                                    <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                                        {peerSuggestions.map((u) => (
+                                            <button
+                                                key={u.id}
+                                                type="button"
+                                                onClick={() => addPeer(u)}
+                                                className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 flex items-center justify-between group"
+                                            >
+                                                <div>
+                                                    <p className="font-semibold text-slate-900">{u.name}</p>
+                                                    <p className="text-xs text-slate-500">{u.email}</p>
+                                                </div>
+                                                <PlusCircle className="w-4 h-4 text-slate-300 group-hover:text-indigo-600" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-xs text-slate-400 flex items-center gap-1">
+                                <Info className="w-3 h-3" /> People you invite will receive an email to join this circle.
+                            </p>
+                            </div>
+                        </>
+                    )}
 
                     {error && (
                         <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
@@ -466,14 +532,16 @@ export default function PitchClient({
                         </button>
                         <button
                             type="submit"
-                            disabled={!selectedMentorId || !title || !description || isPending}
-                            className="flex-1 py-4 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-md text-base"
+                            disabled={(pitchMode === "MENTEE" && !selectedMentorId) || !title || !description || isPending}
+                            className={`flex-1 py-4 text-white rounded-xl font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-md text-base ${pitchMode === "MENTEE" ? "bg-amber-500 hover:bg-amber-600" : "bg-indigo-600 hover:bg-indigo-700"}`}
                         >
-                            {isPending && pendingAction === "submit" ? "Sending..." : "🎯 Send Pitch to Mentor"}
+                            {isPending && pendingAction === "submit" && pitchMode === "MENTEE" ? "Sending..." : null}
+                            {isPending && pendingAction === "publish" && pitchMode === "MENTOR" ? "Publishing..." : null}
+                            {!isPending ? (pitchMode === "MENTEE" ? "🎯 Send Pitch to Mentor" : "🚀 Publish Circle") : null}
                         </button>
                     </div>
 
-                    {!selectedMentorId && followedCount > 0 && (
+                    {pitchMode === "MENTEE" && !selectedMentorId && followedCount > 0 && (
                         <p className="text-center text-xs text-slate-400">
                             Click <strong>Pitch to</strong> on a followed mentor above to select them.
                         </p>
