@@ -191,8 +191,8 @@ export default function CircleRoomClient({
                             key={key}
                             onClick={() => setTab(key as typeof tab)}
                             className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-all border-b-2 flex-1 justify-center ${tab === key
-                                    ? "border-indigo-600 text-indigo-600 bg-indigo-50"
-                                    : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                                ? "border-indigo-600 text-indigo-600 bg-indigo-50"
+                                : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                                 }`}
                         >
                             {icon} {label}
@@ -220,6 +220,14 @@ export default function CircleRoomClient({
                                 <input required value={sessionTitle} onChange={(e) => setSessionTitle(e.target.value)} placeholder="Session title" className="block w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                                 <input required type="datetime-local" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} className="block w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                                 <input type="url" value={sessionUrl} onChange={(e) => setSessionUrl(e.target.value)} placeholder="Video call link (Google Meet, Zoom...)" className="block w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                                <div className="flex gap-2">
+                                    <a href="https://meet.google.com/new" target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+                                        <Globe2 className="w-3 h-3 text-emerald-500" /> Create Google Meet
+                                    </a>
+                                    <a href="https://zoom.us/start/videohost" target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+                                        <Video className="w-3 h-3 text-indigo-500" /> Create Zoom
+                                    </a>
+                                </div>
                                 <div className="flex gap-2 justify-end">
                                     <button type="button" onClick={() => setShowSessionForm(false)} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-xl border border-slate-200">Cancel</button>
                                     <button type="submit" disabled={isPending} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50">Add Session</button>
