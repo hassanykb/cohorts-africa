@@ -56,8 +56,8 @@ export default function SettingsClient({ user }: { user: User }) {
                 await updateProfile(user.id, { name, bio, linkedinUrl, role });
                 setSaved(true);
                 setTimeout(() => setSaved(false), 3000);
-            } catch {
-                setError("Failed to save. Please try again.");
+            } catch (err: any) {
+                setError(err.message || "Failed to save. Please try again.");
             }
         });
     }
@@ -86,7 +86,7 @@ export default function SettingsClient({ user }: { user: User }) {
                             onChange={(e) => setName(e.target.value)}
                             type="text"
                             required
-                            className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900"
                         />
                     </div>
 
@@ -110,7 +110,7 @@ export default function SettingsClient({ user }: { user: User }) {
                             onChange={(e) => setLinkedinUrl(e.target.value)}
                             type="url"
                             placeholder="https://linkedin.com/in/yourname"
-                            className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
+                            className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400 bg-white text-slate-900"
                         />
                     </div>
 
@@ -124,7 +124,7 @@ export default function SettingsClient({ user }: { user: User }) {
                             rows={3}
                             maxLength={300}
                             placeholder="Tell mentors and mentees a bit about yourself..."
-                            className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400 resize-none"
+                            className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400 resize-none bg-white text-slate-900"
                         />
                         <p className="text-xs text-slate-400 mt-1 text-right">{bio.length}/300</p>
                     </div>
@@ -146,8 +146,8 @@ export default function SettingsClient({ user }: { user: User }) {
                                 type="button"
                                 onClick={() => setRole(opt.value)}
                                 className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-all ${role === opt.value
-                                        ? "border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500"
-                                        : "border-slate-200 hover:border-indigo-300 bg-white"
+                                    ? "border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500"
+                                    : "border-slate-200 hover:border-indigo-300 bg-white"
                                     }`}
                             >
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${role === opt.value ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"

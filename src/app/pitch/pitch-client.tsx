@@ -180,7 +180,7 @@ export default function PitchClient({
                                 onChange={(e) => setTitle(e.target.value)}
                                 type="text"
                                 placeholder='e.g. "Breaking into HealthTech Product Roles in West Africa"'
-                                className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
+                                className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400 bg-white text-slate-900"
                             />
                         </div>
                         <div>
@@ -193,7 +193,7 @@ export default function PitchClient({
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 placeholder="What problem is your group facing, and why is this mentor the right guide?"
-                                className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400 resize-none"
+                                className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400 resize-none bg-white text-slate-900"
                             />
                         </div>
                         <div>
@@ -221,7 +221,7 @@ export default function PitchClient({
                                     value={customTag}
                                     onChange={(e) => setCustomTag(e.target.value)}
                                     placeholder="Add custom... (e.g. AI Safety)"
-                                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900"
                                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }}
                                 />
                                 <button

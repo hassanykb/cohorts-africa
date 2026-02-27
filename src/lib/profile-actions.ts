@@ -22,7 +22,11 @@ export async function updateProfile(userId: string, data: {
         .eq("id", userId);
 
     if (error) {
-        console.error("Update Profile Error:", error);
+        console.error("Update Profile Error:", {
+            error,
+            userId,
+            data
+        });
         throw new Error(error.message || "Failed to save changes.");
     }
     revalidatePath("/profile");
