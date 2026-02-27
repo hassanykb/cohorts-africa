@@ -29,7 +29,7 @@ export async function getUser(): Promise<AppUser | null> {
         email: session.user.email,
         name: session.user.name ?? session.user.email,
         role: "MENTEE",
-        reputationScore: 100,
+        reputationScore: 75,
         createdAt: now,
         updatedAt: now,
     }, { onConflict: "id", ignoreDuplicates: true });

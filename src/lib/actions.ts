@@ -150,7 +150,7 @@ export async function upsertUser(user: {
         email: user.email,
         name: user.name,
         role: user.role ?? "MENTEE",
-        reputationScore: 100,
+        reputationScore: 75,
         createdAt: now,
         updatedAt: now,
     }, { onConflict: "id" });
