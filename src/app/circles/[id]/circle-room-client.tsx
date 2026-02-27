@@ -98,7 +98,7 @@ export default function CircleRoomClient({
     function handleAddResource(e: React.FormEvent) {
         e.preventDefault();
         startTransition(async () => {
-            await addResource(circle.id, currentUser.id, { title: resTitle, url: resUrl, type: resType });
+            await addResource(circle.id, { title: resTitle, url: resUrl, type: resType });
             setResources((prev) => [{
                 id: crypto.randomUUID(), title: resTitle, url: resUrl, type: resType,
                 User: { name: currentUser.name }, createdAt: new Date().toISOString(),
@@ -112,7 +112,7 @@ export default function CircleRoomClient({
         e.preventDefault();
         if (!newPost.trim()) return;
         startTransition(async () => {
-            await postDiscussion(circle.id, currentUser.id, newPost);
+            await postDiscussion(circle.id, newPost);
             setPosts((prev) => [{
                 id: crypto.randomUUID(), content: newPost,
                 User: { name: currentUser.name }, createdAt: new Date().toISOString(),
