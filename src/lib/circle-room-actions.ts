@@ -6,6 +6,7 @@ import { getUser } from "@/lib/get-user";
 
 type CircleAccessErrorCode = "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND";
 type CircleAccessError = Error & { code: CircleAccessErrorCode };
+type QueryError = { code?: string | null; message?: string | null };
 
 type CircleAccessContext = {
     supabase: ReturnType<typeof createServerClient>;
@@ -19,17 +20,21 @@ function createCircleAccessError(code: CircleAccessErrorCode, message: string): 
     return error;
 }
 
-function isCircleAccessError(error: unknown, code?: CircleAccessErrorCode): boolean {
-    if (!(error instanceof Error)) return false;
-    const value = (error as { code?: unknown }).code;
-    if (
-        value !== "UNAUTHENTICATED"
-        && value !== "FORBIDDEN"
-        && value !== "NOT_FOUND"
-    ) {
-        return false;
+function isRecoverableRoomSchemaError(error: QueryError | null | undefined): boolean {
+    if (!error) return false;
+    const code = error.code ?? "";
+    if (code === "42P01" || code === "42703" || code === "PGRST200" || code === "PGRST201" || code === "PGRST204" || code === "PGRST205") {
+        return true;
     }
-    return code ? value === code : true;
+
+    const message = (error.message ?? "").toLowerCase();
+    return (
+        message.includes("does not exist")
+        || message.includes("could not find the table")
+        || message.includes("could not find a relationship")
+        || message.includes("schema cache")
+        || message.includes("column")
+    );
 }
 
 async function requireCircleAccess(circleId: string, options?: { mentorOnly?: boolean }): Promise<CircleAccessContext> {
@@ -82,7 +87,7 @@ async function requireCircleAccess(circleId: string, options?: { mentorOnly?: bo
 export async function getCircleRoom(circleId: string) {
     const { supabase, isMentor } = await requireCircleAccess(circleId);
 
-    const [{ data: circle, error: circleError }, { data: sessions, error: sessionsError }, { data: resources, error: resourcesError }, { data: posts, error: postsError }] =
+    const [{ data: circleWithMentor, error: circleError }, { data: sessions, error: sessionsError }, { data: resources, error: resourcesError }, { data: posts, error: postsError }] =
         await Promise.all([
             supabase.from("Circle").select("*, User!Circle_mentorId_fkey(name, email)").eq("id", circleId).single(),
             supabase.from("CircleSession").select("*").eq("circleId", circleId).order("scheduledAt", { ascending: true }),
@@ -90,15 +95,68 @@ export async function getCircleRoom(circleId: string) {
             supabase.from("DiscussionPost").select("*, User!DiscussionPost_authorId_fkey(name)").eq("circleId", circleId).is("parentId", null).order("createdAt", { ascending: false }),
         ]);
 
-    if (circleError) throw circleError;
-    if (sessionsError) throw sessionsError;
-    if (resourcesError) throw resourcesError;
-    if (postsError) throw postsError;
+    let circle = circleWithMentor;
+    if (circleError) {
+        if (!isRecoverableRoomSchemaError(circleError)) throw circleError;
+        const { data: fallbackCircle, error: fallbackCircleError } = await supabase
+            .from("Circle")
+            .select("*")
+            .eq("id", circleId)
+            .single();
+
+        if (fallbackCircleError) throw fallbackCircleError;
+        circle = { ...fallbackCircle, User: null };
+    }
+
+    let safeSessions = sessions ?? [];
+    if (sessionsError) {
+        if (!isRecoverableRoomSchemaError(sessionsError)) throw sessionsError;
+        console.warn("Circle room: session table/schema not ready, returning empty sessions.", sessionsError.message);
+        safeSessions = [];
+    }
+
+    let safeResources = resources ?? [];
+    if (resourcesError) {
+        if (!isRecoverableRoomSchemaError(resourcesError)) throw resourcesError;
+        const { data: fallbackResources, error: fallbackResourcesError } = await supabase
+            .from("Resource")
+            .select("*")
+            .eq("circleId", circleId)
+            .order("createdAt", { ascending: false });
+
+        if (fallbackResourcesError) {
+            if (!isRecoverableRoomSchemaError(fallbackResourcesError)) throw fallbackResourcesError;
+            console.warn("Circle room: resource table/schema not ready, returning empty resources.", fallbackResourcesError.message);
+            safeResources = [];
+        } else {
+            safeResources = (fallbackResources ?? []).map((item) => ({ ...item, User: null }));
+        }
+    }
+
+    let safePosts = posts ?? [];
+    if (postsError) {
+        if (!isRecoverableRoomSchemaError(postsError)) throw postsError;
+        const { data: fallbackPosts, error: fallbackPostsError } = await supabase
+            .from("DiscussionPost")
+            .select("*")
+            .eq("circleId", circleId)
+            .is("parentId", null)
+            .order("createdAt", { ascending: false });
+
+        if (fallbackPostsError) {
+            if (!isRecoverableRoomSchemaError(fallbackPostsError)) throw fallbackPostsError;
+            console.warn("Circle room: discussion table/schema not ready, returning empty discussion.", fallbackPostsError.message);
+            safePosts = [];
+        } else {
+            safePosts = (fallbackPosts ?? []).map((item) => ({ ...item, User: null }));
+        }
+    }
+
     if (!circle) {
         throw createCircleAccessError("NOT_FOUND", "Circle not found.");
     }
 
-    return { circle, sessions: sessions ?? [], resources: resources ?? [], posts: posts ?? [], isMentor };
+    return { circle, sessions: safeSessions, resources: safeResources, posts: safePosts, isMentor };
 }
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
