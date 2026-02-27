@@ -23,9 +23,11 @@ export default function Home() {
               <Link href="#enterprise" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Enterprise</Link>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors hidden sm:block">Log in</Link>
+              <Link href="/login" className="text-sm font-medium bg-slate-100 text-slate-700 px-5 py-2.5 rounded-full hover:bg-slate-200 transition-all">
+                Log in
+              </Link>
               <Link href="/signup" className="text-sm font-medium bg-indigo-600 text-white px-5 py-2.5 rounded-full hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 hover:shadow-md hover:shadow-indigo-300">
-                Join the Waitlist
+                Get Started
               </Link>
             </div>
           </div>
@@ -68,7 +70,7 @@ export default function Home() {
             <h2 className="text-3xl font-bold text-slate-900 mb-4">How Cohorts Works</h2>
             <p className="text-slate-600 max-w-2xl mx-auto">We've engineered a platform that scales the time of busy professionals while maximizing peer-to-peer accountability.</p>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-10">
             {/* Feature 1 */}
             <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100 hover:shadow-xl transition-shadow duration-300">
@@ -115,16 +117,16 @@ export default function Home() {
             Whether you are a young professional looking for guidance or an executive looking to give back without burning out.
           </p>
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-            <button className="w-full sm:w-auto px-8 py-4 bg-white text-indigo-900 rounded-full font-semibold text-lg hover:bg-slate-100 transition-all shadow-lg hover:shadow-xl">
+            <Link href="/signup" className="w-full sm:w-auto px-8 py-4 bg-white text-indigo-900 rounded-full font-semibold text-lg hover:bg-slate-100 transition-all shadow-lg hover:shadow-xl text-center">
               Apply as a Mentee
-            </button>
-            <button className="w-full sm:w-auto px-8 py-4 bg-indigo-800/50 text-white border border-indigo-700/50 rounded-full font-semibold text-lg hover:bg-indigo-800 transition-all backdrop-blur-sm">
+            </Link>
+            <Link href="/signup" className="w-full sm:w-auto px-8 py-4 bg-indigo-800/50 text-white border border-indigo-700/50 rounded-full font-semibold text-lg hover:bg-indigo-800 transition-all backdrop-blur-sm text-center">
               Apply as a Mentor
-            </button>
+            </Link>
           </div>
         </div>
       </section>
-      
+
       {/* Footer */}
       <footer className="bg-white py-12 border-t border-slate-200 text-center">
         <p className="text-slate-500 font-medium tracking-wide">

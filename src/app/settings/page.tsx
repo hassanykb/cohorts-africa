@@ -6,8 +6,9 @@ import { Globe2 } from "lucide-react";
 import ProfileMenu from "@/components/ProfileMenu";
 import BrandLogo from "@/components/BrandLogo";
 
-function initials(name: string) {
-    return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+function initials(name?: string | null) {
+    if (!name) return "ME";
+    return name.split(" ").filter(Boolean).map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 }
 
 export default async function SettingsPage() {

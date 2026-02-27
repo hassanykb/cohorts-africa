@@ -7,9 +7,11 @@ import {
 import { getUser } from "@/lib/get-user";
 import { getCirclesByMentor, getPitchRequestsForMentor, acceptPitch, declinePitch } from "@/lib/actions";
 import ProfileMenu from "@/components/ProfileMenu";
+import BrandLogo from "@/components/BrandLogo";
 
-function initials(name: string) {
-    return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+function initials(name?: string | null) {
+    if (!name) return "ME";
+    return name.split(" ").filter(Boolean).map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 }
 
 export default async function MentorDashboard() {
@@ -24,7 +26,7 @@ export default async function MentorDashboard() {
     const active = circles.filter((c: Record<string, unknown>) => c.status === "ACTIVE" || c.status === "OPEN");
     const completed = circles.filter((c: Record<string, unknown>) => c.status === "COMPLETED");
     const totalMentees = circles.reduce((sum: number, c: Record<string, unknown>) => sum + ((c.Application as unknown[])?.length ?? 0), 0);
-    const firstName = user.name.split(" ")[0];
+    const firstName = user.name?.split(" ")[0] ?? "there";
 
     const STATS = [
         { label: "Active Circles", value: String(active.length), icon: Users, color: "bg-indigo-100 text-indigo-600" },
@@ -38,17 +40,18 @@ export default async function MentorDashboard() {
             <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
-                        <Link href="/" className="font-bold text-xl tracking-tight flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-                                <Globe2 className="w-5 h-5 text-white" />
-                            </div>
-                            Cohorts.Africa
-                        </Link>
+                        <BrandLogo role={user.role} />
                         <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-                            <Link href="/dashboard/mentor" className="text-indigo-600">My Dashboard</Link>
-                            <Link href="/explore" className="text-slate-600 hover:text-indigo-600 transition-colors">Explore Circles</Link>
+                            <Link href="/dashboard/mentor" className="text-indigo-600">Mentor Dashboard</Link>
+                            <Link href="/explore" className="text-slate-600 hover:text-indigo-600 transition-colors">Explore</Link>
                         </div>
-                        <ProfileMenu name={user.name} email={user.email} initials={initials(user.name)} role={user.role} avatarUrl={user.avatarUrl} />
+                        <ProfileMenu
+                            name={user.name}
+                            email={user.email}
+                            initials={initials(user.name)}
+                            role={user.role}
+                            avatarUrl={user.avatarUrl}
+                        />
                     </div>
                 </div>
             </nav>

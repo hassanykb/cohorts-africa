@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Info, PlusCircle, UserCheck, UserPlus, UserX, Users, Calendar, MessageSquare, Plus, FileText, ExternalLink, Video, Clock, MapPin, Search, Filter, ArrowRight, Share2, Globe } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import ProfileMenu from "@/components/ProfileMenu";
 import { useState, useTransition, useOptimistic } from "react";
 import { submitPitch, followMentor, unfollowMentor, searchUsers, type MentorWithFollow } from "@/lib/actions";
 
@@ -21,15 +22,19 @@ const MENTOR_TAGS: Record<string, string[]> = {
     "mentor-serena": ["Marketing", "Career Pivot"],
 };
 
+function initials(name: string) {
+    return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+}
+
 export default function PitchClient({
-    userId,
-    userRole,
+    user,
     mentors,
 }: {
-    userId: string;
-    userRole: string;
+    user: any; // Type as AppUser if possible
     mentors: MentorWithFollow[];
 }) {
+    const userId = user.id;
+    const userRole = user.role;
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [selectedMentorId, setSelectedMentorId] = useState<string | null>(null);
     const [title, setTitle] = useState("");
@@ -142,9 +147,13 @@ export default function PitchClient({
             <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
                     <BrandLogo role={userRole} />
-                    <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-sm">
-                        {userId.slice(0, 2).toUpperCase()}
-                    </div>
+                    <ProfileMenu
+                        name={user.name}
+                        email={user.email}
+                        initials={initials(user.name)}
+                        role={user.role}
+                        avatarUrl={user.avatarUrl}
+                    />
                 </div>
             </nav>
 
@@ -199,15 +208,26 @@ export default function PitchClient({
                                 Focus Areas <span className="text-slate-400 font-normal">(up to 5)</span>
                             </label>
                             <div className="flex flex-wrap gap-2">
-                                {TAGS.map((tag) => (
+                                {/* Selected Tags first as badges */}
+                                {selectedTags.map((tag) => (
                                     <button
                                         key={tag}
                                         type="button"
                                         onClick={() => toggleTag(tag)}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${selectedTags.includes(tag)
-                                            ? "bg-indigo-600 text-white border-indigo-600"
-                                            : "bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-400"
-                                            }`}
+                                        className="px-3 py-1.5 rounded-full text-xs font-medium bg-indigo-600 text-white border border-indigo-600 shadow-sm flex items-center gap-1"
+                                    >
+                                        {tag}
+                                        <span className="opacity-60 text-base leading-none">×</span>
+                                    </button>
+                                ))}
+
+                                {/* Unselected Suggested Tags */}
+                                {TAGS.filter(tag => !selectedTags.includes(tag)).map((tag) => (
+                                    <button
+                                        key={tag}
+                                        type="button"
+                                        onClick={() => toggleTag(tag)}
+                                        className="px-3 py-1.5 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200 hover:border-indigo-400"
                                     >
                                         {tag}
                                     </button>

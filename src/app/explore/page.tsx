@@ -15,8 +15,9 @@ async function getCircles() {
     return data ?? [];
 }
 
-function initials(name: string) {
-    return name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
+function initials(name?: string | null) {
+    if (!name) return "ME";
+    return name.split(" ").filter(Boolean).map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
 }
 
 export default async function Explore() {

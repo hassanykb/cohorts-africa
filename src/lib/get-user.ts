@@ -22,21 +22,24 @@ export async function getUser(): Promise<AppUser | null> {
     if (!session?.user?.email) return null;
 
     const supabase = createServerClient();
-
-    // Upsert on every call ensures new OAuth sign-ins are always recorded
     const now = new Date().toISOString();
     const userId = (session.user as { id?: string }).id ?? session.user.email;
 
-    await supabase.from("User").upsert({
-        id: userId,
-        email: session.user.email,
-        name: session.user.name ?? session.user.email,
-        avatarUrl: session.user.image ?? null,
-        role: "MENTEE",
-        reputationScore: 75,
-        createdAt: now,
-        updatedAt: now,
-    }, { onConflict: "id", ignoreDuplicates: true });
+    // Upsert on every call ensures new OAuth sign-ins are always recorded
+    // We wrap in try/catch to avoid crashing if DB schema is slightly out of sync
+    try {
+        await supabase.from("User").upsert({
+            id: userId,
+            email: session.user.email,
+            name: session.user.name ?? session.user.email,
+            avatarUrl: session.user.image ?? null,
+            role: "MENTEE",
+            reputationScore: 75,
+            updatedAt: now,
+        }, { onConflict: "id", ignoreDuplicates: true });
+    } catch (e) {
+        console.error("getUser: Silent upsert failure", e);
+    }
 
     const { data } = await supabase
         .from("User")

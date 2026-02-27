@@ -9,8 +9,9 @@ import { getApplicationsByMentee } from "@/lib/actions";
 import ProfileMenu from "@/components/ProfileMenu";
 import BrandLogo from "@/components/BrandLogo";
 
-function initials(name: string) {
-    return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+function initials(name?: string | null) {
+    if (!name) return "ME";
+    return name.split(" ").filter(Boolean).map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 }
 
 function scoreColor(score: number) {
@@ -27,7 +28,7 @@ export default async function MenteeDashboard() {
     const active = applications.filter((a: Record<string, unknown>) => a.status === "ACCEPTED");
     const pending = applications.filter((a: Record<string, unknown>) => a.status === "PENDING" || a.status === "REJECTED");
     const score = scoreColor(user.reputationScore);
-    const firstName = user.name.split(" ")[0];
+    const firstName = user.name?.split(" ")[0] ?? "there";
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
@@ -38,8 +39,7 @@ export default async function MenteeDashboard() {
                         <BrandLogo role={user.role} />
                         <div className="hidden md:flex items-center gap-6 text-sm font-medium">
                             <Link href="/dashboard/mentee" className="text-indigo-600">My Dashboard</Link>
-                            <Link href="/explore" className="text-slate-600 hover:text-indigo-600 transition-colors">Explore Circles</Link>
-                            <Link href="/pitch" className="text-slate-600 hover:text-indigo-600 transition-colors">Pitch a Circle</Link>
+                            <Link href="/explore" className="text-slate-600 hover:text-indigo-600 transition-colors">Explore</Link>
                         </div>
                         <div className="flex items-center gap-3">
                             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold ${score.badge}`}>
