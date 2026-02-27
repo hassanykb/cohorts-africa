@@ -1,51 +1,32 @@
-"use client";
-
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
     Globe2, ShieldCheck, BookOpen, Clock, CheckCircle,
     AlertCircle, ArrowRight, PlusCircle, Trophy,
 } from "lucide-react";
+import { getUser } from "@/lib/get-user";
+import { getApplicationsByMentee } from "@/lib/actions";
 
-const MOCK_ACTIVE = [
-    {
-        id: 1,
-        title: "Transitioning from Audit to Tech PM",
-        mentor: "David Osei · VP Product, FinTech Africa",
-        nextSession: "Thu, 27 Feb · 6:00 PM GMT",
-        progress: 2,
-        totalWeeks: 4,
-    },
-];
+function initials(name: string) {
+    return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+}
 
-const MOCK_APPLICATIONS = [
-    {
-        id: 2,
-        title: "Scaling Backend Systems for Millions of Users",
-        mentor: "Amina Lawal · Engineering Manager",
-        status: "PENDING",
-        appliedAt: "2 days ago",
-    },
-    {
-        id: 3,
-        title: "Navigating Corporate Finance",
-        mentor: "Kwame Asante · CFO, PanAfrican Bank",
-        status: "REJECTED",
-        appliedAt: "5 days ago",
-    },
-];
+function scoreColor(score: number) {
+    if (score >= 80) return { badge: "bg-emerald-100 text-emerald-700", bar: "bg-emerald-500", label: "Excellent standing — elite circles unlocked!" };
+    if (score >= 60) return { badge: "bg-amber-100 text-amber-700", bar: "bg-amber-500", label: "Good standing — keep attending sessions." };
+    return { badge: "bg-rose-100 text-rose-700", bar: "bg-rose-500", label: "Low score — missed sessions restrict elite access." };
+}
 
-const MOCK_ALUMNI = [
-    {
-        id: 4,
-        title: "LinkedIn Profile Masterclass",
-        mentor: "Serena Adu",
-        completedAt: "Jan 2026",
-    },
-];
+export default async function MenteeDashboard() {
+    const user = await getUser();
+    if (!user) redirect("/login");
 
-const reputationScore = 85;
+    const applications = await getApplicationsByMentee(user.id);
+    const active = applications.filter((a: Record<string, unknown>) => a.status === "ACCEPTED");
+    const pending = applications.filter((a: Record<string, unknown>) => a.status === "PENDING" || a.status === "REJECTED");
+    const score = scoreColor(user.reputationScore);
+    const firstName = user.name.split(" ")[0];
 
-export default function MenteeDashboard() {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
             {/* Nav */}
@@ -64,18 +45,12 @@ export default function MenteeDashboard() {
                             <Link href="/pitch" className="text-slate-600 hover:text-indigo-600 transition-colors">Pitch a Circle</Link>
                         </div>
                         <div className="flex items-center gap-3">
-                            {/* Reputation Score badge */}
-                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold ${reputationScore >= 80
-                                    ? "bg-emerald-100 text-emerald-700"
-                                    : reputationScore >= 60
-                                        ? "bg-amber-100 text-amber-700"
-                                        : "bg-rose-100 text-rose-700"
-                                }`}>
+                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold ${score.badge}`}>
                                 <ShieldCheck className="w-4 h-4" />
-                                {reputationScore} pts
+                                {user.reputationScore} pts
                             </div>
-                            <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-sm border-2 border-white shadow-sm">
-                                KM
+                            <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-sm shadow-sm">
+                                {initials(user.name)}
                             </div>
                         </div>
                     </div>
@@ -83,10 +58,10 @@ export default function MenteeDashboard() {
             </nav>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Welcome + Reputation meter */}
+                {/* Welcome + Reputation */}
                 <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-slate-900">Welcome, Kwame 👋</h1>
+                        <h1 className="text-3xl font-extrabold text-slate-900">Welcome, {firstName} 👋</h1>
                         <p className="text-slate-500 mt-1">Your active circles and applications at a glance.</p>
                     </div>
                     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 min-w-[200px]">
@@ -94,22 +69,12 @@ export default function MenteeDashboard() {
                             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
                                 <Trophy className="w-3.5 h-3.5 text-amber-500" /> Reputation Score
                             </p>
-                            <span className="text-lg font-extrabold text-slate-900">{reputationScore}</span>
+                            <span className="text-lg font-extrabold text-slate-900">{user.reputationScore}</span>
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-2">
-                            <div
-                                className={`h-2 rounded-full transition-all ${reputationScore >= 80 ? "bg-emerald-500" : reputationScore >= 60 ? "bg-amber-500" : "bg-rose-500"
-                                    }`}
-                                style={{ width: `${reputationScore}%` }}
-                            />
+                            <div className={`h-2 rounded-full transition-all ${score.bar}`} style={{ width: `${user.reputationScore}%` }} />
                         </div>
-                        <p className="text-xs text-slate-400 mt-1.5">
-                            {reputationScore >= 80
-                                ? "Excellent standing — elite circles unlocked!"
-                                : reputationScore >= 60
-                                    ? "Good standing — keep attending sessions."
-                                    : "Low score — missed sessions restrict elite access."}
-                        </p>
+                        <p className="text-xs text-slate-400 mt-1.5">{score.label}</p>
                     </div>
                 </div>
 
@@ -124,41 +89,35 @@ export default function MenteeDashboard() {
                                     Find more <ArrowRight className="w-4 h-4" />
                                 </Link>
                             </div>
-                            {MOCK_ACTIVE.length === 0 ? (
-                                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center text-slate-400 text-sm">
-                                    You're not in any circles yet. <Link href="/explore" className="text-indigo-600 font-medium hover:underline">Explore now →</Link>
+                            {active.length === 0 ? (
+                                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
+                                    <p className="text-slate-400 text-sm mb-3">You're not in any circles yet.</p>
+                                    <Link href="/explore" className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700">
+                                        Explore Circles →
+                                    </Link>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    {MOCK_ACTIVE.map((circle) => (
-                                        <div key={circle.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div>
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 mb-2">
-                                                        ACTIVE
-                                                    </span>
-                                                    <h3 className="text-base font-semibold text-slate-900">{circle.title}</h3>
-                                                    <p className="text-sm text-slate-500">{circle.mentor}</p>
+                                    {active.map((app: Record<string, unknown>) => {
+                                        const circle = app.Circle as Record<string, unknown> | null;
+                                        return (
+                                            <div key={app.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div>
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 mb-2">ACTIVE</span>
+                                                        <h3 className="text-base font-semibold text-slate-900">{circle?.title as string ?? "Circle"}</h3>
+                                                    </div>
+                                                    <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
+                                                        <ArrowRight className="w-4 h-4" />
+                                                    </button>
                                                 </div>
-                                                <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
-                                                    <ArrowRight className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                            {/* Progress Bar */}
-                                            <div className="mt-3">
-                                                <div className="flex justify-between text-xs text-slate-400 mb-1">
-                                                    <span>Week {circle.progress} of {circle.totalWeeks}</span>
-                                                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {circle.nextSession}</span>
-                                                </div>
-                                                <div className="w-full bg-slate-100 rounded-full h-1.5">
-                                                    <div
-                                                        className="h-1.5 rounded-full bg-indigo-500 transition-all"
-                                                        style={{ width: `${(circle.progress / circle.totalWeeks) * 100}%` }}
-                                                    />
+                                                <div className="flex items-center gap-1 text-xs text-slate-400 mt-2">
+                                                    <Clock className="w-3.5 h-3.5" />
+                                                    <span>In progress</span>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </section>
@@ -166,47 +125,70 @@ export default function MenteeDashboard() {
                         {/* My Applications */}
                         <section>
                             <h2 className="text-xl font-bold text-slate-900 mb-4">My Applications</h2>
-                            <div className="space-y-3">
-                                {MOCK_APPLICATIONS.map((app) => (
-                                    <div key={app.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center justify-between">
-                                        <div className="flex items-start gap-3">
-                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${app.status === "PENDING" ? "bg-amber-100" : "bg-rose-100"
-                                                }`}>
-                                                {app.status === "PENDING"
-                                                    ? <Clock className="w-4 h-4 text-amber-600" />
-                                                    : <AlertCircle className="w-4 h-4 text-rose-600" />}
+                            {pending.length === 0 ? (
+                                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-400 text-sm">
+                                    No pending applications. <Link href="/explore" className="text-indigo-600 font-medium hover:underline">Apply to a circle →</Link>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {pending.map((app: Record<string, unknown>) => {
+                                        const circle = app.Circle as Record<string, unknown> | null;
+                                        const status = app.status as string;
+                                        return (
+                                            <div key={app.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center justify-between">
+                                                <div className="flex items-start gap-3">
+                                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${status === "PENDING" ? "bg-amber-100" : "bg-rose-100"}`}>
+                                                        {status === "PENDING"
+                                                            ? <Clock className="w-4 h-4 text-amber-600" />
+                                                            : <AlertCircle className="w-4 h-4 text-rose-600" />}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-slate-800">{circle?.title as string ?? "Circle"}</p>
+                                                        <p className="text-xs text-slate-500">Applied · {new Date(app.createdAt as string).toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${status === "PENDING" ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>
+                                                    {status}
+                                                </span>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-800">{app.title}</p>
-                                                <p className="text-xs text-slate-500">{app.mentor} · Applied {app.appliedAt}</p>
-                                            </div>
-                                        </div>
-                                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${app.status === "PENDING"
-                                                ? "bg-amber-100 text-amber-700"
-                                                : "bg-rose-100 text-rose-700"
-                                            }`}>
-                                            {app.status}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </section>
                     </div>
 
                     {/* Right column */}
                     <div className="space-y-6">
+                        {/* Profile card */}
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-lg">
+                                    {initials(user.name)}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-slate-900">{user.name}</p>
+                                    <p className="text-xs text-slate-500">{user.email}</p>
+                                </div>
+                            </div>
+                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${score.badge}`}>
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                {user.reputationScore} Reputation Points
+                            </div>
+                        </div>
+
                         {/* Quick actions */}
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                             <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">Quick Actions</h3>
                             <div className="space-y-2">
                                 <Link href="/explore" className="flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-colors group">
-                                    <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                                    <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200">
                                         <BookOpen className="w-4 h-4 text-indigo-600" />
                                     </div>
                                     <span className="text-sm font-medium text-slate-700 group-hover:text-indigo-700">Browse Open Circles</span>
                                 </Link>
                                 <Link href="/pitch" className="flex items-center gap-3 p-3 rounded-xl hover:bg-amber-50 transition-colors group">
-                                    <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-200 transition-colors">
+                                    <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-200">
                                         <PlusCircle className="w-4 h-4 text-amber-600" />
                                     </div>
                                     <span className="text-sm font-medium text-slate-700 group-hover:text-amber-700">Pitch a Custom Circle</span>
@@ -214,18 +196,13 @@ export default function MenteeDashboard() {
                             </div>
                         </div>
 
-                        {/* Completed Circles Alumni */}
+                        {/* Completed Circles */}
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                             <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">Your Alumni Circles</h3>
-                            {MOCK_ALUMNI.map((a) => (
-                                <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
-                                    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-800">{a.title}</p>
-                                        <p className="text-xs text-slate-400">with {a.mentor} · {a.completedAt}</p>
-                                    </div>
-                                </div>
-                            ))}
+                            <div className="text-center text-slate-400 text-sm py-4">
+                                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-slate-200" />
+                                Complete a circle to earn your first badge.
+                            </div>
                         </div>
                     </div>
                 </div>
