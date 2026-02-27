@@ -1,7 +1,15 @@
 import { getUser } from "@/lib/get-user";
-import { getCircleRoom, isCircleAccessError } from "@/lib/circle-room-actions";
+import { getCircleRoom } from "@/lib/circle-room-actions";
 import { notFound, redirect } from "next/navigation";
 import CircleRoomClient from "./circle-room-client";
+
+function hasCircleAccessErrorCode(
+    error: unknown,
+    code: "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND",
+): boolean {
+    if (!(error instanceof Error)) return false;
+    return (error as { code?: unknown }).code === code;
+}
 
 export default async function CircleRoomPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -12,8 +20,8 @@ export default async function CircleRoomPage({ params }: { params: Promise<{ id:
     try {
         room = await getCircleRoom(id);
     } catch (error) {
-        if (isCircleAccessError(error, "UNAUTHENTICATED")) redirect("/login");
-        if (isCircleAccessError(error, "FORBIDDEN") || isCircleAccessError(error, "NOT_FOUND")) notFound();
+        if (hasCircleAccessErrorCode(error, "UNAUTHENTICATED")) redirect("/login");
+        if (hasCircleAccessErrorCode(error, "FORBIDDEN") || hasCircleAccessErrorCode(error, "NOT_FOUND")) notFound();
         throw error;
     }
 

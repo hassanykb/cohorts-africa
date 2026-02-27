@@ -19,7 +19,7 @@ function createCircleAccessError(code: CircleAccessErrorCode, message: string): 
     return error;
 }
 
-export function isCircleAccessError(error: unknown, code?: CircleAccessErrorCode): boolean {
+function isCircleAccessError(error: unknown, code?: CircleAccessErrorCode): boolean {
     if (!(error instanceof Error)) return false;
     const value = (error as { code?: unknown }).code;
     if (
