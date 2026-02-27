@@ -81,13 +81,13 @@ export default async function MenteeDashboard() {
                         <div className="flex items-center gap-2">
                             <button
                                 className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-[#0077B5] text-white text-[10px] font-bold hover:bg-[#006097] transition-colors"
-                                onClick={`window.open('https://www.linkedin.com/sharing/share-offsite/?url=https://cohorts-africa.vercel.app&summary=I just reached a reputation score of ${user.reputationScore} on Cohorts.Africa! 🚀', '_blank')` as any}
+                                onClick={`window.open('https://www.linkedin.com/sharing/share-offsite/?url=https://cohorts-africa.vercel.app&summary=I just reached a reputation score of ${user.reputationScore} on Cohorts Network! 🚀', '_blank')` as any}
                             >
                                 <Linkedin className="w-3 h-3" /> Share
                             </button>
                             <button
                                 className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-black text-white text-[10px] font-bold hover:bg-slate-800 transition-colors"
-                                onClick={`window.open('https://twitter.com/intent/tweet?text=I just reached a reputation score of ${user.reputationScore} on Cohorts.Africa! 🚀 join me at https://cohorts-africa.vercel.app', '_blank')` as any}
+                                onClick={`window.open('https://twitter.com/intent/tweet?text=I just reached a reputation score of ${user.reputationScore} on Cohorts Network! 🚀 join me at https://cohorts-africa.vercel.app', '_blank')` as any}
                             >
                                 <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.134l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg> Tweet
                             </button>

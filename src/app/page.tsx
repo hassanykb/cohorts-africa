@@ -14,7 +14,7 @@ export default function Home() {
                 <Globe2 className="w-5 h-5 text-white" />
               </div>
               <span className="font-bold text-xl tracking-tight text-slate-900">
-                Cohorts.Africa
+                Cohorts Network
               </span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
@@ -130,7 +130,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-white py-12 border-t border-slate-200 text-center">
         <p className="text-slate-500 font-medium tracking-wide">
-          © {new Date().getFullYear()} Cohorts.Africa. Built for the continent.
+          © {new Date().getFullYear()} Cohorts Network. Built for the continent, scaling for the world.
         </p>
       </footer>
     </div>

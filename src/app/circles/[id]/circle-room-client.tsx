@@ -144,7 +144,7 @@ export default function CircleRoomClient({
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
                     <Link href="/" className="font-bold text-xl flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center"><Globe2 className="w-5 h-5 text-white" /></div>
-                        Cohorts.Africa
+                        Cohorts Network
                     </Link>
                     <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-sm">
                         {initials(currentUser.name)}

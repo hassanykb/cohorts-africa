@@ -13,7 +13,7 @@ export default function LoginPage() {
                         <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center">
                             <Globe2 className="w-6 h-6 text-white" />
                         </div>
-                        <span className="font-bold text-2xl text-slate-900">Cohorts.Africa</span>
+                        <span className="font-bold text-2xl text-slate-900">Cohorts Network</span>
                     </div>
                     <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Welcome back</h1>
                     <p className="text-slate-500">Sign in to continue your journey</p>

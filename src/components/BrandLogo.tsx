@@ -19,7 +19,7 @@ export default function BrandLogo({ role, className = "" }: Props) {
             <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
                 <Globe2 className="w-5 h-5 text-white" />
             </div>
-            <span className="text-slate-900">Cohorts.Africa</span>
+            <span className="text-slate-900">Cohorts Network</span>
         </Link>
     );
 }
