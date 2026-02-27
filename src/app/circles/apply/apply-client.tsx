@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Globe2, ArrowLeft, Users, Clock, MapPin } from "lucide-react";
+import { ArrowLeft, Users, Clock, MapPin } from "lucide-react";
 import { useState, useTransition } from "react";
 import { submitApplication } from "@/lib/actions";
+import AppNavbar from "@/components/AppNavbar";
+import { getDefaultDashboardPath } from "@/lib/roles";
 
 const WORD_LIMIT = 150;
 function countWords(t: string) { return t.trim().split(/\s+/).filter(Boolean).length; }
@@ -11,18 +13,27 @@ function countWords(t: string) { return t.trim().split(/\s+/).filter(Boolean).le
 // In production, circleId would come from URL params
 const CIRCLE_ID = "demo-circle-id";
 
-export default function ApplyClient({ userId }: { userId: string }) {
+type ApplyUser = {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    avatarUrl?: string | null;
+};
+
+export default function ApplyClient({ user }: { user: ApplyUser }) {
     const [intent, setIntent] = useState("");
     const [committed, setCommitted] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [isPending, startTransition] = useTransition();
     const wordCount = countWords(intent);
     const isOver = wordCount > WORD_LIMIT;
+    const dashboardPath = getDefaultDashboardPath(user.role);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         startTransition(async () => {
-            await submitApplication(CIRCLE_ID, userId, intent);
+            await submitApplication(CIRCLE_ID, user.id, intent);
             setSubmitted(true);
         });
     }
@@ -33,8 +44,8 @@ export default function ApplyClient({ userId }: { userId: string }) {
                 <div className="max-w-md w-full text-center">
                     <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">✅</div>
                     <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Application Submitted!</h1>
-                    <p className="text-slate-500 mb-6">Your application is now <strong>PENDING</strong> review. You'll be notified by email when a decision is made.</p>
-                    <Link href="/dashboard/mentee" className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-full font-semibold hover:bg-indigo-700">
+                    <p className="text-slate-500 mb-6">Your application is now <strong>PENDING</strong> review. You&apos;ll be notified by email when a decision is made.</p>
+                    <Link href={dashboardPath} className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-full font-semibold hover:bg-indigo-700">
                         Go to My Dashboard
                     </Link>
                 </div>
@@ -44,17 +55,7 @@ export default function ApplyClient({ userId }: { userId: string }) {
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans">
-            <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
-                    <Link href="/" className="font-bold text-xl flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center"><Globe2 className="w-5 h-5 text-white" /></div>
-                        Cohorts Network
-                    </Link>
-                    <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-sm shadow-sm">
-                        {userId.slice(0, 2).toUpperCase()}
-                    </div>
-                </div>
-            </nav>
+            <AppNavbar user={user} />
 
             <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
                 <Link href="/explore" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 mb-6">
@@ -74,7 +75,7 @@ export default function ApplyClient({ userId }: { userId: string }) {
 
                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8">
                     <h1 className="text-2xl font-extrabold text-slate-900 mb-1">Apply to this Circle</h1>
-                    <p className="text-slate-500 text-sm mb-6">Answer the mentor's question thoughtfully — this is your only chance to make a first impression.</p>
+                    <p className="text-slate-500 text-sm mb-6">Answer the mentor&apos;s question thoughtfully — this is your only chance to make a first impression.</p>
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div>

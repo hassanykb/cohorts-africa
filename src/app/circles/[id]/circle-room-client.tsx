@@ -10,6 +10,7 @@ import {
 import {
     addSession, addResource, postDiscussion, markSessionComplete,
 } from "@/lib/circle-room-actions";
+import AppNavbar from "@/components/AppNavbar";
 
 type Session = {
     id: string; title: string; scheduledAt: string;
@@ -139,18 +140,7 @@ export default function CircleRoomClient({
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans">
-            {/* Nav */}
-            <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
-                    <Link href="/" className="font-bold text-xl flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center"><Globe2 className="w-5 h-5 text-white" /></div>
-                        Cohorts Network
-                    </Link>
-                    <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-sm">
-                        {initials(currentUser.name)}
-                    </div>
-                </div>
-            </nav>
+            <AppNavbar user={currentUser} />
 
             <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
                 <Link href="/explore" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 mb-5">

@@ -15,6 +15,7 @@ enum Role {
 }
 
 enum CircleStatus {
+  DRAFT
   PROPOSED
   OPEN
   ACTIVE

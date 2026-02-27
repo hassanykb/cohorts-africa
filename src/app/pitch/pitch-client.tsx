@@ -2,10 +2,18 @@
 
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Info, PlusCircle, UserCheck, UserPlus, UserX, Users, Calendar, MessageSquare, Plus, FileText, ExternalLink, Video, Clock, MapPin, Search, Filter, ArrowRight, Share2, Globe } from "lucide-react";
-import BrandLogo from "@/components/BrandLogo";
-import ProfileMenu from "@/components/ProfileMenu";
 import { useState, useTransition, useOptimistic } from "react";
-import { submitPitch, followMentor, unfollowMentor, searchUsers, type MentorWithFollow } from "@/lib/actions";
+import { submitPitch, savePitchDraft, followMentor, unfollowMentor, searchUsers, type MentorWithFollow } from "@/lib/actions";
+import AppNavbar from "@/components/AppNavbar";
+import { useRouter } from "next/navigation";
+
+type PitchUser = {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    avatarUrl?: string | null;
+};
 
 const TAGS = [
     "Career Pivot", "FinTech", "Product Management", "Engineering",
@@ -22,19 +30,15 @@ const MENTOR_TAGS: Record<string, string[]> = {
     "mentor-serena": ["Marketing", "Career Pivot"],
 };
 
-function initials(name: string) {
-    return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
-}
-
 export default function PitchClient({
     user,
     mentors,
 }: {
-    user: any; // Type as AppUser if possible
+    user: PitchUser;
     mentors: MentorWithFollow[];
 }) {
+    const router = useRouter();
     const userId = user.id;
-    const userRole = user.role;
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [selectedMentorId, setSelectedMentorId] = useState<string | null>(null);
     const [title, setTitle] = useState("");
@@ -46,6 +50,7 @@ export default function PitchClient({
     const [peerQuery, setPeerQuery] = useState("");
     const [peerSuggestions, setPeerSuggestions] = useState<{ id: string; name: string; email: string }[]>([]);
     const [invitedPeers, setInvitedPeers] = useState<{ id?: string; name?: string; email: string }[]>([]);
+    const [pendingAction, setPendingAction] = useState<"submit" | "draft" | null>(null);
 
     // Optimistic follow state so the UI feels instant
     const [optimisticMentors, updateOptimistic] = useOptimistic(
@@ -109,12 +114,34 @@ export default function PitchClient({
         e.preventDefault();
         setError("");
         if (!selectedMentorId) { setError("Please select a mentor you follow."); return; }
+        setPendingAction("submit");
         startTransition(async () => {
             try {
                 await submitPitch({ creatorId: userId, mentorId: selectedMentorId, title, description, tags: selectedTags });
                 setSubmitted(true);
             } catch (err: unknown) {
+                setPendingAction(null);
                 setError(err instanceof Error ? err.message : "Something went wrong.");
+            }
+        });
+    }
+
+    function handleSaveDraft() {
+        setError("");
+        setPendingAction("draft");
+        startTransition(async () => {
+            try {
+                await savePitchDraft({
+                    creatorId: userId,
+                    mentorId: selectedMentorId,
+                    title,
+                    description,
+                });
+                router.push("/dashboard/mentee");
+                router.refresh();
+            } catch (err: unknown) {
+                setPendingAction(null);
+                setError(err instanceof Error ? err.message : "Failed to save draft.");
             }
         });
     }
@@ -143,19 +170,7 @@ export default function PitchClient({
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans">
-            {/* Nav */}
-            <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
-                    <BrandLogo role={userRole} />
-                    <ProfileMenu
-                        name={user.name}
-                        email={user.email}
-                        initials={initials(user.name)}
-                        role={user.role}
-                        avatarUrl={user.avatarUrl}
-                    />
-                </div>
-            </nav>
+            <AppNavbar user={user} />
 
             <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
                 <Link href="/dashboard/mentee" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 mb-6">
@@ -267,7 +282,7 @@ export default function PitchClient({
                             <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600" />
                             <p>
                                 <strong>Follow a mentor first</strong> to unlock pitching to them. This ensures the mentor
-                                knows you're genuinely interested in their guidance.
+                                knows you&apos;re genuinely interested in their guidance.
                             </p>
                         </div>
 
@@ -440,13 +455,23 @@ export default function PitchClient({
                         </p>
                     )}
 
-                    <button
-                        type="submit"
-                        disabled={!selectedMentorId || !title || !description || isPending}
-                        className="w-full py-4 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-md text-base"
-                    >
-                        {isPending ? "Sending..." : "🎯 Send Pitch to Mentor"}
-                    </button>
+                    <div className="flex gap-3">
+                        <button
+                            type="button"
+                            onClick={handleSaveDraft}
+                            disabled={isPending}
+                            className="px-6 py-4 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-md text-base"
+                        >
+                            {isPending && pendingAction === "draft" ? "Saving..." : "Save Draft"}
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={!selectedMentorId || !title || !description || isPending}
+                            className="flex-1 py-4 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-md text-base"
+                        >
+                            {isPending && pendingAction === "submit" ? "Sending..." : "🎯 Send Pitch to Mentor"}
+                        </button>
+                    </div>
 
                     {!selectedMentorId && followedCount > 0 && (
                         <p className="text-center text-xs text-slate-400">

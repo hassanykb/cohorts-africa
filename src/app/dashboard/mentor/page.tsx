@@ -2,22 +2,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
     Users, PlusCircle, Clock, CheckCircle,
-    Globe2, ArrowRight, BarChart2, Inbox,
+    ArrowRight, BarChart2, Inbox,
     Linkedin,
 } from "lucide-react";
 import { getUser } from "@/lib/get-user";
 import { getCirclesByMentor, getPitchRequestsForMentor, acceptPitch, declinePitch } from "@/lib/actions";
-import ProfileMenu from "@/components/ProfileMenu";
-import BrandLogo from "@/components/BrandLogo";
-
-function initials(name?: string | null) {
-    if (!name) return "ME";
-    return name.split(" ").filter(Boolean).map((n) => n[0]).join("").slice(0, 2).toUpperCase();
-}
+import { isMentorRole } from "@/lib/roles";
+import AppNavbar from "@/components/AppNavbar";
 
 export default async function MentorDashboard() {
     const user = await getUser();
     if (!user) redirect("/login");
+    if (!isMentorRole(user.role)) redirect("/dashboard/mentee");
 
     const [circles, pitches] = await Promise.all([
         getCirclesByMentor(user.id),
@@ -38,24 +34,7 @@ export default async function MentorDashboard() {
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-            <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <BrandLogo role={user.role} />
-                        <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-                            <Link href="/dashboard/mentor" className="text-indigo-600">Mentor Dashboard</Link>
-                            <Link href="/explore" className="text-slate-600 hover:text-indigo-600 transition-colors">Explore</Link>
-                        </div>
-                        <ProfileMenu
-                            name={user.name}
-                            email={user.email}
-                            initials={initials(user.name)}
-                            role={user.role}
-                            avatarUrl={user.avatarUrl}
-                        />
-                    </div>
-                </div>
-            </nav>
+            <AppNavbar user={user} active="dashboard" />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -117,14 +96,16 @@ export default async function MentorDashboard() {
                             <div className="space-y-4">
                                 {circles.map((circle: Record<string, unknown>) => {
                                     const apps = (circle.Application as unknown[])?.length ?? 0;
+                                    const status = circle.status as string;
+                                    const statusLabel = status;
                                     return (
                                         <div key={circle.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-start justify-between hover:shadow-md transition-shadow">
                                             <div className="flex-1 min-w-0">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${circle.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800"
-                                                    : circle.status === "OPEN" ? "bg-indigo-100 text-indigo-800"
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${status === "ACTIVE" ? "bg-emerald-100 text-emerald-800"
+                                                    : status === "OPEN" ? "bg-indigo-100 text-indigo-800"
                                                         : "bg-slate-100 text-slate-500"
                                                     }`}>
-                                                    {circle.status as string}
+                                                    {statusLabel}
                                                 </span>
                                                 <h3 className="text-base font-semibold text-slate-900 mb-1 truncate">{circle.title as string}</h3>
                                                 <div className="flex items-center gap-3 text-sm text-slate-500">
@@ -132,7 +113,7 @@ export default async function MentorDashboard() {
                                                         <Users className="w-3.5 h-3.5" />
                                                         {apps}/{circle.maxCapacity as number} mentees
                                                     </span>
-                                                    {circle.status === "ACTIVE" && (
+                                                    {status === "ACTIVE" && (
                                                         <>
                                                             <span className="text-slate-300">•</span>
                                                             <span className="flex items-center gap-1">

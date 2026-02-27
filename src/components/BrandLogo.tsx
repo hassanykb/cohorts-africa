@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Globe2 } from "lucide-react";
+import { getDefaultDashboardPath } from "@/lib/roles";
 
 type Props = {
     role?: string;
@@ -9,10 +10,9 @@ type Props = {
 };
 
 export default function BrandLogo({ role, className = "" }: Props) {
-    let href = "/"; // Default href for missing or unhandled roles
-    if (role === "MENTOR") href = "/dashboard/mentor";
-    else if (role === "MENTEE") href = "/dashboard/mentee";
-    else if (role === "BOTH") href = "/dashboard/mentee"; // Default to mentee for both, or we could add a smarter check
+    const href = role === "MENTOR" || role === "MENTEE" || role === "BOTH"
+        ? getDefaultDashboardPath(role)
+        : "/";
 
     return (
         <Link href={href} className={`font-bold text-xl flex items-center gap-2 ${className}`}>

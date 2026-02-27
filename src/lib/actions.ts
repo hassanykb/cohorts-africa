@@ -42,18 +42,32 @@ export async function getPitchRequestsForMentor(mentorId: string) {
     return data ?? [];
 }
 
-export async function createCircle(formData: FormData, mentorId: string) {
+export async function createCircle(formData: FormData, mentorId: string, options?: { asDraft?: boolean }) {
     const supabase = createServerClient();
     const now = new Date().toISOString();
+    const circleId = crypto.randomUUID();
+    const asDraft = options?.asDraft ?? false;
+
+    const titleInput = formData.get("title");
+    const descriptionInput = formData.get("description");
+    const title = typeof titleInput === "string" ? titleInput.trim() : "";
+    const description = typeof descriptionInput === "string" ? descriptionInput.trim() : "";
+
+    const resolvedTitle = title || (asDraft ? "Untitled Draft Circle" : "");
+    const resolvedDescription = description || (asDraft ? "Draft description" : "");
+
+    if (!resolvedTitle || !resolvedDescription) {
+        throw new Error("Title and description are required.");
+    }
 
     const { error } = await supabase.from("Circle").insert({
-        id: crypto.randomUUID(),
+        id: circleId,
         creatorId: mentorId,
         mentorId: mentorId,
-        title: formData.get("title") as string,
-        description: formData.get("description") as string,
+        title: resolvedTitle,
+        description: resolvedDescription,
         maxCapacity: Number(formData.get("capacity") ?? 10),
-        status: "OPEN",
+        status: asDraft ? "DRAFT" : "OPEN",
         createdAt: now,
         updatedAt: now,
     });
@@ -61,6 +75,38 @@ export async function createCircle(formData: FormData, mentorId: string) {
     if (error) throw error;
     revalidatePath("/dashboard/mentor");
     revalidatePath("/explore");
+    return circleId;
+}
+
+export async function savePitchDraft(data: {
+    creatorId: string;
+    mentorId?: string | null;
+    title?: string;
+    description?: string;
+}) {
+    const supabase = createServerClient();
+    const now = new Date().toISOString();
+    const circleId = crypto.randomUUID();
+
+    const title = data.title?.trim() || "Untitled Draft Pitch";
+    const description = data.description?.trim() || "Draft description";
+
+    const { error } = await supabase.from("Circle").insert({
+        id: circleId,
+        creatorId: data.creatorId,
+        mentorId: data.mentorId ?? null,
+        title,
+        description,
+        maxCapacity: 10,
+        status: "DRAFT",
+        createdAt: now,
+        updatedAt: now,
+    });
+
+    if (error) throw error;
+    revalidatePath("/dashboard/mentee");
+    revalidatePath("/pitch");
+    return circleId;
 }
 
 // ─── Applications ─────────────────────────────────────────────────────────
@@ -72,6 +118,19 @@ export async function getApplicationsByMentee(menteeId: string) {
         .select("*, Circle(title, mentorId)")
         .eq("menteeId", menteeId)
         .order("createdAt", { ascending: false });
+
+    if (error) throw error;
+    return data ?? [];
+}
+
+export async function getDraftCirclesByCreator(creatorId: string) {
+    const supabase = createServerClient();
+    const { data, error } = await supabase
+        .from("Circle")
+        .select("id, title, description, updatedAt, mentorId")
+        .eq("creatorId", creatorId)
+        .eq("status", "DRAFT")
+        .order("updatedAt", { ascending: false });
 
     if (error) throw error;
     return data ?? [];

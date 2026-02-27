@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-    Globe2, ShieldCheck, BookOpen, Clock, CheckCircle,
+    ShieldCheck, BookOpen, Clock, CheckCircle,
     AlertCircle, ArrowRight, PlusCircle, Trophy,
-    Linkedin, Share2,
+    Linkedin,
 } from "lucide-react";
 import { getUser } from "@/lib/get-user";
-import { getApplicationsByMentee } from "@/lib/actions";
-import ProfileMenu from "@/components/ProfileMenu";
-import BrandLogo from "@/components/BrandLogo";
+import { getApplicationsByMentee, getDraftCirclesByCreator } from "@/lib/actions";
+import AppNavbar from "@/components/AppNavbar";
 
 function initials(name?: string | null) {
     if (!name) return "ME";
@@ -24,8 +23,12 @@ function scoreColor(score: number) {
 export default async function MenteeDashboard() {
     const user = await getUser();
     if (!user) redirect("/login");
+    if (user.role === "MENTOR") redirect("/dashboard/mentor");
 
-    const applications = await getApplicationsByMentee(user.id);
+    const [applications, drafts] = await Promise.all([
+        getApplicationsByMentee(user.id),
+        getDraftCirclesByCreator(user.id),
+    ]);
     const active = applications.filter((a: Record<string, unknown>) => a.status === "ACCEPTED");
     const pending = applications.filter((a: Record<string, unknown>) => a.status === "PENDING" || a.status === "REJECTED");
     const score = scoreColor(user.reputationScore);
@@ -33,31 +36,7 @@ export default async function MenteeDashboard() {
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-            {/* Nav */}
-            <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <BrandLogo role={user.role} />
-                        <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-                            <Link href="/dashboard/mentee" className="text-indigo-600">My Dashboard</Link>
-                            <Link href="/explore" className="text-slate-600 hover:text-indigo-600 transition-colors">Explore</Link>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold ${score.badge}`}>
-                                <ShieldCheck className="w-4 h-4" />
-                                {user.reputationScore} pts
-                            </div>
-                            <ProfileMenu
-                                name={user.name}
-                                email={user.email}
-                                initials={initials(user.name)}
-                                role={user.role}
-                                avatarUrl={user?.avatarUrl}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <AppNavbar user={user} active="dashboard" />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Welcome + Reputation */}
@@ -112,7 +91,7 @@ export default async function MenteeDashboard() {
                             </div>
                             {active.length === 0 ? (
                                 <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
-                                    <p className="text-slate-400 text-sm mb-3">You're not in any circles yet.</p>
+                                    <p className="text-slate-400 text-sm mb-3">You&apos;re not in any circles yet.</p>
                                     <Link href="/explore" className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700">
                                         Explore Circles →
                                     </Link>
@@ -144,6 +123,35 @@ export default async function MenteeDashboard() {
                         </section>
 
                         {/* My Applications */}
+                        <section>
+                            <h2 className="text-xl font-bold text-slate-900 mb-4">My Draft Circles</h2>
+                            {drafts.length === 0 ? (
+                                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-400 text-sm mb-8">
+                                    No drafts yet. Start one from <Link href="/pitch" className="text-indigo-600 font-medium hover:underline">Pitch a Custom Circle</Link>.
+                                </div>
+                            ) : (
+                                <div className="space-y-3 mb-8">
+                                    {drafts.map((draft: Record<string, unknown>) => (
+                                        <div key={draft.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-800">{draft.title as string}</p>
+                                                <p className="text-xs text-slate-500">
+                                                    Last updated · {new Date(draft.updatedAt as string).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <Link
+                                                href={`/circles/${draft.id as string}`}
+                                                className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                                            >
+                                                Open Draft <ArrowRight className="w-3.5 h-3.5" />
+                                            </Link>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                        </section>
+
                         <section>
                             <h2 className="text-xl font-bold text-slate-900 mb-4">My Applications</h2>
                             {pending.length === 0 ? (

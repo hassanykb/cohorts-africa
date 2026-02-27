@@ -7,5 +7,5 @@ export default async function ApplyPage() {
     const user = await getUser();
     if (!user) redirect("/login");
 
-    return <ApplyClient userId={user.id} />;
+    return <ApplyClient user={user} />;
 }

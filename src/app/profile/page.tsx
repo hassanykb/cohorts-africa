@@ -1,9 +1,9 @@
 import { getUser } from "@/lib/get-user";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Globe2, ArrowLeft, Mail, Award, ExternalLink } from "lucide-react";
-import ProfileMenu from "@/components/ProfileMenu";
-import BrandLogo from "@/components/BrandLogo";
+import { ArrowLeft, Mail, Award, ExternalLink } from "lucide-react";
+import { getDefaultDashboardPath } from "@/lib/roles";
+import AppNavbar from "@/components/AppNavbar";
 
 function initials(name: string) {
     return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
@@ -20,15 +20,10 @@ export default async function ProfilePage() {
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans">
-            <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
-                    <BrandLogo role={user.role} />
-                    <ProfileMenu name={user.name} email={user.email} initials={initials(user.name)} role={user.role} avatarUrl={user.avatarUrl} />
-                </div>
-            </nav>
+            <AppNavbar user={user} />
 
             <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10">
-                <Link href={user.role === "MENTOR" ? "/dashboard/mentor" : "/dashboard/mentee"} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 mb-6">
+                <Link href={getDefaultDashboardPath(user.role)} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 mb-6">
                     <ArrowLeft className="w-4 h-4" /> Back to Dashboard
                 </Link>
 
