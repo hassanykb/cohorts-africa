@@ -182,7 +182,7 @@ export async function getApplicationsByMentee(menteeId: string) {
     const supabase = createServerClient();
     const { data, error } = await supabase
         .from("Application")
-        .select("*, Circle(title, mentorId)")
+        .select("*, Circle(id, title, mentorId)")
         .eq("menteeId", menteeId)
         .order("createdAt", { ascending: false });
 

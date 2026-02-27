@@ -37,8 +37,8 @@ export default function AppNavbar({ user, active = "none" }: Props) {
                 <div className="flex items-center gap-6">
                     {user && (
                         <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-                            <Link href={dashboardPath} className={linkClass(active === "dashboard")}>Dashboard</Link>
                             <Link href="/explore" className={linkClass(active === "explore")}>Explore</Link>
+                            <Link href={dashboardPath} className={linkClass(active === "dashboard")}>Dashboard</Link>
                         </div>
                     )}
                     {user ? (

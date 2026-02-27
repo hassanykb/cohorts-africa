@@ -1,9 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-    ShieldCheck, BookOpen, Clock, CheckCircle,
-    AlertCircle, ArrowRight, PlusCircle, Trophy,
-    Linkedin, Users, Inbox,
+    AlertCircle,
+    ArrowRight,
+    BookOpen,
+    Clock,
+    Inbox,
+    Linkedin,
+    PlusCircle,
+    ShieldCheck,
+    Trophy,
+    Users,
 } from "lucide-react";
 import { getUser } from "@/lib/get-user";
 import {
@@ -25,9 +32,33 @@ function initials(name?: string | null) {
 }
 
 function scoreColor(score: number) {
-    if (score >= 80) return { badge: "bg-emerald-100 text-emerald-700", bar: "bg-emerald-500", label: "Excellent standing — elite circles unlocked!" };
-    if (score >= 60) return { badge: "bg-amber-100 text-amber-700", bar: "bg-amber-500", label: "Good standing — keep attending sessions." };
-    return { badge: "bg-rose-100 text-rose-700", bar: "bg-rose-500", label: "Low score — missed sessions restrict elite access." };
+    if (score >= 80) {
+        return {
+            badge: "bg-emerald-100 text-emerald-700",
+            bar: "bg-emerald-500",
+            label: "Excellent standing — elite circles unlocked!",
+        };
+    }
+    if (score >= 60) {
+        return {
+            badge: "bg-amber-100 text-amber-700",
+            bar: "bg-amber-500",
+            label: "Good standing — keep attending sessions.",
+        };
+    }
+    return {
+        badge: "bg-rose-100 text-rose-700",
+        bar: "bg-rose-500",
+        label: "Low score — missed sessions restrict elite access.",
+    };
+}
+
+function statusPillClass(status: string) {
+    if (status === "ACTIVE") return "bg-emerald-100 text-emerald-800";
+    if (status === "OPEN") return "bg-indigo-100 text-indigo-800";
+    if (status === "PROPOSED") return "bg-amber-100 text-amber-800";
+    if (status === "DRAFT") return "bg-slate-100 text-slate-600";
+    return "bg-slate-100 text-slate-600";
 }
 
 export default async function MenteeDashboard() {
@@ -41,6 +72,7 @@ export default async function MenteeDashboard() {
         getCirclesByCreator(user.id),
         getPitchRequestsForMentor(user.id),
     ]);
+
     if (applicationsResult.status === "rejected") {
         console.error("Mentee dashboard: failed to load applications", applicationsResult.reason);
     }
@@ -63,22 +95,23 @@ export default async function MenteeDashboard() {
     const creatorCircles = creatorCirclesResult.status === "fulfilled" ? creatorCirclesResult.value : [];
     const pitches = pitchesResult.status === "fulfilled" ? pitchesResult.value : [];
 
-    const active = applications.filter((a: Record<string, unknown>) => a.status === "ACCEPTED");
+    const activeMemberships = applications.filter((a: Record<string, unknown>) => a.status === "ACCEPTED");
     const waitlisted = applications.filter((a: Record<string, unknown>) => a.status === "WAITLIST");
     const pending = applications.filter((a: Record<string, unknown>) => a.status === "PENDING" || a.status === "REJECTED");
+
     const managedCircleMap = new Map<string, Record<string, unknown>>();
     [...mentorCircles, ...creatorCircles].forEach((circle) => {
         const key = String(circle.id ?? "");
         if (!key) return;
-        if (!managedCircleMap.has(key)) {
-            managedCircleMap.set(key, circle as Record<string, unknown>);
-        }
+        if (!managedCircleMap.has(key)) managedCircleMap.set(key, circle as Record<string, unknown>);
     });
+
     const managedCircles = Array.from(managedCircleMap.values()).sort((a, b) => {
         const aTime = new Date(String(a.updatedAt ?? a.createdAt ?? 0)).getTime();
         const bTime = new Date(String(b.updatedAt ?? b.createdAt ?? 0)).getTime();
         return bTime - aTime;
     });
+
     const score = scoreColor(user.reputationScore);
     const firstName = user.name?.split(" ")[0] ?? "there";
 
@@ -87,11 +120,10 @@ export default async function MenteeDashboard() {
             <AppNavbar user={user} active="dashboard" />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Welcome + Reputation */}
                 <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-3xl font-extrabold text-slate-900">Welcome, {firstName} 👋</h1>
-                        <p className="text-slate-500 mt-1">Your active circles and applications at a glance.</p>
+                        <p className="text-slate-500 mt-1">Manage circles, track applications, and jump into sessions faster.</p>
                     </div>
                     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 min-w-[250px]">
                         <div className="flex items-center justify-between mb-2">
@@ -126,8 +158,26 @@ export default async function MenteeDashboard() {
                     </div>
                 </div>
 
+                <section className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                        <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Managed Circles</p>
+                        <p className="text-2xl font-extrabold text-slate-900 mt-1">{managedCircles.length}</p>
+                    </div>
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                        <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Active Memberships</p>
+                        <p className="text-2xl font-extrabold text-slate-900 mt-1">{activeMemberships.length}</p>
+                    </div>
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                        <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Application Inbox</p>
+                        <p className="text-2xl font-extrabold text-slate-900 mt-1">{pending.length + waitlisted.length}</p>
+                    </div>
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                        <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Incoming Pitches</p>
+                        <p className="text-2xl font-extrabold text-slate-900 mt-1">{pitches.length}</p>
+                    </div>
+                </section>
+
                 <div className="grid lg:grid-cols-3 gap-8">
-                    {/* Left column */}
                     <div className="lg:col-span-2 space-y-8">
                         <section>
                             <div className="flex items-center justify-between mb-4">
@@ -154,25 +204,15 @@ export default async function MenteeDashboard() {
                                         const canReopen = status === "ACTIVE" && filledApps < maxCapacity;
                                         const needsDualApproval = Boolean(circle.mentorId) && circle.creatorId !== circle.mentorId;
 
-                                        const statusClass = status === "ACTIVE"
-                                            ? "bg-emerald-100 text-emerald-800"
-                                            : status === "OPEN"
-                                                ? "bg-indigo-100 text-indigo-800"
-                                                : status === "PROPOSED"
-                                                    ? "bg-amber-100 text-amber-800"
-                                                    : status === "DRAFT"
-                                                        ? "bg-slate-100 text-slate-600"
-                                                        : "bg-slate-100 text-slate-600";
-
                                         return (
                                             <div key={circle.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                                                 <div className="flex items-start justify-between gap-4">
                                                     <div className="min-w-0">
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${statusClass}`}>
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${statusPillClass(status)}`}>
                                                             {status}
                                                         </span>
                                                         <h3 className="text-base font-semibold text-slate-900 truncate">{circle.title as string}</h3>
-                                                        <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
+                                                        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 mt-1">
                                                             <span className="flex items-center gap-1">
                                                                 <Users className="w-3.5 h-3.5" />
                                                                 {filledApps}/{maxCapacity} filled
@@ -194,10 +234,11 @@ export default async function MenteeDashboard() {
                                                         </div>
                                                         {needsDualApproval && (
                                                             <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 inline-block">
-                                                                Capacity and duration changes need both organizer and mentor approval.
+                                                                Capacity/duration changes need organizer + mentor approval.
                                                             </p>
                                                         )}
                                                     </div>
+
                                                     <div className="flex flex-col items-end gap-2">
                                                         <Link
                                                             href={`/circles/${circle.id as string}`}
@@ -205,6 +246,7 @@ export default async function MenteeDashboard() {
                                                         >
                                                             Open Room
                                                         </Link>
+
                                                         {isMentorForCircle && status === "OPEN" && (
                                                             <form>
                                                                 <button
@@ -215,6 +257,7 @@ export default async function MenteeDashboard() {
                                                                 </button>
                                                             </form>
                                                         )}
+
                                                         {isMentorForCircle && status === "ACTIVE" && (
                                                             <form>
                                                                 <button
@@ -236,62 +279,13 @@ export default async function MenteeDashboard() {
                         </section>
 
                         <section>
-                            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                Incoming Pitch Requests
-                                {pitches.length > 0 && (
-                                    <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">
-                                        {pitches.length}
-                                    </span>
-                                )}
-                            </h2>
-                            {pitches.length === 0 ? (
-                                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-400 text-sm">
-                                    <Inbox className="w-8 h-8 mx-auto mb-2 text-slate-200" />
-                                    No pitch requests yet.
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {pitches.map((pitch: Record<string, unknown>) => {
-                                        const creator = pitch.User as { name: string; email: string } | null;
-                                        return (
-                                            <div key={pitch.id as string} className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5">
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 mb-3">
-                                                    Awaiting your response
-                                                </span>
-                                                <h3 className="text-base font-semibold text-slate-900 mb-1">{pitch.title as string}</h3>
-                                                <p className="text-sm text-slate-500 mb-4">
-                                                    Proposed by <span className="font-medium text-slate-700">{creator?.name ?? "a member"}</span>
-                                                </p>
-                                                <form className="flex gap-2">
-                                                    <button
-                                                        formAction={async () => { "use server"; await acceptPitch(pitch.id as string, user.id); }}
-                                                        className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors"
-                                                    >
-                                                        Accept
-                                                    </button>
-                                                    <button
-                                                        formAction={async () => { "use server"; await declinePitch(pitch.id as string); }}
-                                                        className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors"
-                                                    >
-                                                        Decline
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </section>
-
-                        {/* Active Circles */}
-                        <section>
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-xl font-bold text-slate-900">Active Circles</h2>
+                                <h2 className="text-xl font-bold text-slate-900">My Active Circles</h2>
                                 <Link href="/explore" className="text-sm text-indigo-600 hover:underline font-medium flex items-center gap-1">
                                     Find more <ArrowRight className="w-4 h-4" />
                                 </Link>
                             </div>
-                            {active.length === 0 ? (
+                            {activeMemberships.length === 0 ? (
                                 <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
                                     <p className="text-slate-400 text-sm mb-3">You&apos;re not in any circles yet.</p>
                                     <Link href="/explore" className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-full text-sm font-semibold hover:bg-indigo-700">
@@ -300,18 +294,26 @@ export default async function MenteeDashboard() {
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    {active.map((app: Record<string, unknown>) => {
+                                    {activeMemberships.map((app: Record<string, unknown>) => {
                                         const circle = app.Circle as Record<string, unknown> | null;
+                                        const circleId = typeof circle?.id === "string" ? circle.id : null;
                                         return (
                                             <div key={app.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
                                                 <div className="flex items-start justify-between mb-3">
                                                     <div>
-                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 mb-2">ACTIVE</span>
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 mb-2">
+                                                            ACTIVE
+                                                        </span>
                                                         <h3 className="text-base font-semibold text-slate-900">{circle?.title as string ?? "Circle"}</h3>
                                                     </div>
-                                                    <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
-                                                        <ArrowRight className="w-4 h-4" />
-                                                    </button>
+                                                    {circleId && (
+                                                        <Link
+                                                            href={`/circles/${circleId}`}
+                                                            className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                                                        >
+                                                            <ArrowRight className="w-4 h-4" />
+                                                        </Link>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-1 text-xs text-slate-400 mt-2">
                                                     <Clock className="w-3.5 h-3.5" />
@@ -323,106 +325,9 @@ export default async function MenteeDashboard() {
                                 </div>
                             )}
                         </section>
-
-                        {/* My Applications */}
-                        <section>
-                            <h2 className="text-xl font-bold text-slate-900 mb-4">My Draft Circles</h2>
-                            {drafts.length === 0 ? (
-                                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-400 text-sm mb-8">
-                                    No drafts yet. Start one from <Link href="/pitch" className="text-indigo-600 font-medium hover:underline">Pitch a Custom Circle</Link>.
-                                </div>
-                            ) : (
-                                <div className="space-y-3 mb-8">
-                                    {drafts.map((draft: Record<string, unknown>) => (
-                                        <div key={draft.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-800">{draft.title as string}</p>
-                                                <p className="text-xs text-slate-500">
-                                                    Last updated · {new Date(draft.updatedAt as string).toLocaleDateString()}
-                                                </p>
-                                            </div>
-                                            <Link
-                                                href={`/circles/${draft.id as string}`}
-                                                className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-                                            >
-                                                Open Draft <ArrowRight className="w-3.5 h-3.5" />
-                                            </Link>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                        </section>
-
-                        <section>
-                            <h2 className="text-xl font-bold text-slate-900 mb-4">My Applications</h2>
-                            {pending.length === 0 ? (
-                                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-400 text-sm">
-                                    No pending applications. <Link href="/explore" className="text-indigo-600 font-medium hover:underline">Apply to a circle →</Link>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {pending.map((app: Record<string, unknown>) => {
-                                        const circle = app.Circle as Record<string, unknown> | null;
-                                        const status = app.status as string;
-                                        return (
-                                            <div key={app.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center justify-between">
-                                                <div className="flex items-start gap-3">
-                                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${status === "PENDING" ? "bg-amber-100" : "bg-rose-100"}`}>
-                                                        {status === "PENDING"
-                                                            ? <Clock className="w-4 h-4 text-amber-600" />
-                                                            : <AlertCircle className="w-4 h-4 text-rose-600" />}
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-slate-800">{circle?.title as string ?? "Circle"}</p>
-                                                        <p className="text-xs text-slate-500">Applied · {new Date(app.createdAt as string).toLocaleDateString()}</p>
-                                                    </div>
-                                                </div>
-                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${status === "PENDING" ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>
-                                                    {status}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </section>
-
-                        <section>
-                            <h2 className="text-xl font-bold text-slate-900 mb-4">My Waitlist</h2>
-                            {waitlisted.length === 0 ? (
-                                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-400 text-sm">
-                                    You are not waitlisted for any circles.
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {waitlisted.map((app: Record<string, unknown>) => {
-                                        const circle = app.Circle as Record<string, unknown> | null;
-                                        return (
-                                            <div key={app.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center justify-between">
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-amber-100">
-                                                        <Clock className="w-4 h-4 text-amber-600" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-slate-800">{circle?.title as string ?? "Circle"}</p>
-                                                        <p className="text-xs text-slate-500">Waitlisted · {new Date(app.createdAt as string).toLocaleDateString()}</p>
-                                                    </div>
-                                                </div>
-                                                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
-                                                    WAITLIST
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </section>
                     </div>
 
-                    {/* Right column */}
-                    <div className="space-y-6">
-                        {/* Profile card */}
+                    <aside className="space-y-6">
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                             <div className="flex items-center gap-3 mb-3">
                                 <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-lg">
@@ -439,7 +344,6 @@ export default async function MenteeDashboard() {
                             </div>
                         </div>
 
-                        {/* Quick actions */}
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                             <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">Quick Actions</h3>
                             <div className="space-y-2">
@@ -458,15 +362,118 @@ export default async function MenteeDashboard() {
                             </div>
                         </div>
 
-                        {/* Completed Circles */}
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">Your Alumni Circles</h3>
-                            <div className="text-center text-slate-400 text-sm py-4">
-                                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-slate-200" />
-                                Complete a circle to earn your first badge.
-                            </div>
+                            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
+                                <Inbox className="w-4 h-4 text-amber-600" /> Incoming Pitches
+                            </h3>
+                            {pitches.length === 0 ? (
+                                <p className="text-sm text-slate-400">No pitch requests yet.</p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {pitches.map((pitch: Record<string, unknown>) => {
+                                        const creator = pitch.User as { name: string; email: string } | null;
+                                        return (
+                                            <div key={pitch.id as string} className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                                                <p className="text-sm font-semibold text-slate-900">{pitch.title as string}</p>
+                                                <p className="text-xs text-slate-500 mt-0.5">By {creator?.name ?? "a member"}</p>
+                                                <form className="mt-2 flex gap-2">
+                                                    <button
+                                                        formAction={async () => { "use server"; await acceptPitch(pitch.id as string, user.id); }}
+                                                        className="flex-1 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-colors"
+                                                    >
+                                                        Accept
+                                                    </button>
+                                                    <button
+                                                        formAction={async () => { "use server"; await declinePitch(pitch.id as string); }}
+                                                        className="flex-1 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors"
+                                                    >
+                                                        Decline
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
-                    </div>
+
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">My Draft Circles</h3>
+                            {drafts.length === 0 ? (
+                                <p className="text-sm text-slate-400">
+                                    No drafts yet. Start one from{" "}
+                                    <Link href="/pitch" className="text-indigo-600 hover:underline">Pitch</Link>.
+                                </p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {drafts.map((draft: Record<string, unknown>) => (
+                                        <div key={draft.id as string} className="rounded-xl border border-slate-200 p-3">
+                                            <p className="text-sm font-semibold text-slate-800">{draft.title as string}</p>
+                                            <p className="text-xs text-slate-500">
+                                                Updated · {new Date(draft.updatedAt as string).toLocaleDateString()}
+                                            </p>
+                                            <Link
+                                                href={`/circles/${draft.id as string}`}
+                                                className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 mt-2"
+                                            >
+                                                Open Draft <ArrowRight className="w-3.5 h-3.5" />
+                                            </Link>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">Application Inbox</h3>
+                            {pending.length === 0 && waitlisted.length === 0 ? (
+                                <p className="text-sm text-slate-400">No pending or waitlisted applications.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {pending.length > 0 && (
+                                        <div className="space-y-2">
+                                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Pending / Rejected</p>
+                                            {pending.map((app: Record<string, unknown>) => {
+                                                const circle = app.Circle as Record<string, unknown> | null;
+                                                const status = app.status as string;
+                                                return (
+                                                    <div key={app.id as string} className="rounded-xl border border-slate-200 p-3">
+                                                        <p className="text-sm font-semibold text-slate-800">{circle?.title as string ?? "Circle"}</p>
+                                                        <div className="mt-1 flex items-center justify-between text-xs">
+                                                            <span className="text-slate-500">Applied · {new Date(app.createdAt as string).toLocaleDateString()}</span>
+                                                            <span className={`font-bold px-2 py-0.5 rounded-full ${status === "PENDING" ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>
+                                                                {status}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {waitlisted.length > 0 && (
+                                        <div className="space-y-2">
+                                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Waitlist</p>
+                                            {waitlisted.map((app: Record<string, unknown>) => {
+                                                const circle = app.Circle as Record<string, unknown> | null;
+                                                return (
+                                                    <div key={app.id as string} className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                                                        <p className="text-sm font-semibold text-slate-800">{circle?.title as string ?? "Circle"}</p>
+                                                        <div className="mt-1 flex items-center justify-between text-xs">
+                                                            <span className="text-slate-500">Waitlisted · {new Date(app.createdAt as string).toLocaleDateString()}</span>
+                                                            <span className="font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                                                WAITLIST
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </aside>
                 </div>
             </main>
         </div>

@@ -1,8 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Users, Trophy, ShieldCheck, Globe2 } from "lucide-react";
+import { redirect } from "next/navigation";
+import { getUser } from "@/lib/get-user";
 
-export default function Home() {
+export default async function Home() {
+  const user = await getUser();
+  if (user) {
+    redirect("/explore");
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-500 selection:text-white">
       {/* Navigation */}

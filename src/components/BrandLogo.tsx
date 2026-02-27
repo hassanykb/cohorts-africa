@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Globe2 } from "lucide-react";
-import { getDefaultDashboardPath } from "@/lib/roles";
 
 type Props = {
     role?: string;
@@ -11,7 +10,7 @@ type Props = {
 
 export default function BrandLogo({ role, className = "" }: Props) {
     const href = role === "MENTOR" || role === "MENTEE" || role === "BOTH"
-        ? getDefaultDashboardPath(role)
+        ? "/explore"
         : "/";
 
     return (
