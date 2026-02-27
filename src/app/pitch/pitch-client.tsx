@@ -8,7 +8,9 @@ import { submitPitch, followMentor, unfollowMentor, type MentorWithFollow } from
 const TAGS = [
     "Career Pivot", "FinTech", "Product Management", "Engineering",
     "Data Science", "Entrepreneurship", "Marketing", "HealthTech",
-    "Leadership", "Fundraising", "Remote Work",
+    "Leadership", "Fundraising", "Remote Work", "AI/ML", "Design",
+    "Finance", "Legal", "Public Policy", "Social Impact", "Sales",
+    "Project Management", "Agile", "Blockchain", "Cybersecurity",
 ];
 
 const MENTOR_TAGS: Record<string, string[]> = {
@@ -42,7 +44,7 @@ export default function PitchClient({
 
     const toggleTag = (tag: string) =>
         setSelectedTags((p) =>
-            p.includes(tag) ? p.filter((t) => t !== tag) : p.length < 3 ? [...p, tag] : p
+            p.includes(tag) ? p.filter((t) => t !== tag) : p.length < 5 ? [...p, tag] : p
         );
 
     function handleFollowToggle(mentor: MentorWithFollow) {
@@ -158,7 +160,7 @@ export default function PitchClient({
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                                Focus Areas <span className="text-slate-400 font-normal">(up to 3)</span>
+                                Focus Areas <span className="text-slate-400 font-normal">(up to 5)</span>
                             </label>
                             <div className="flex flex-wrap gap-2">
                                 {TAGS.map((tag) => (
@@ -167,8 +169,8 @@ export default function PitchClient({
                                         type="button"
                                         onClick={() => toggleTag(tag)}
                                         className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${selectedTags.includes(tag)
-                                                ? "bg-indigo-600 text-white border-indigo-600"
-                                                : "bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-400"
+                                            ? "bg-indigo-600 text-white border-indigo-600"
+                                            : "bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-400"
                                             }`}
                                     >
                                         {tag}
@@ -206,10 +208,10 @@ export default function PitchClient({
                                     <div
                                         key={mentor.id}
                                         className={`rounded-xl border transition-all ${isSelected
-                                                ? "border-indigo-500 bg-indigo-50"
-                                                : canSelect
-                                                    ? "border-slate-200 hover:border-indigo-300 bg-white"
-                                                    : "border-slate-100 bg-slate-50 opacity-80"
+                                            ? "border-indigo-500 bg-indigo-50"
+                                            : canSelect
+                                                ? "border-slate-200 hover:border-indigo-300 bg-white"
+                                                : "border-slate-100 bg-slate-50 opacity-80"
                                             }`}
                                     >
                                         <div className="p-4 flex items-start gap-3">
@@ -255,8 +257,8 @@ export default function PitchClient({
                                                     onClick={() => handleFollowToggle(mentor)}
                                                     disabled={isPending}
                                                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${mentor.isFollowing
-                                                            ? "border-slate-200 text-slate-600 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
-                                                            : "border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
+                                                        ? "border-slate-200 text-slate-600 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
+                                                        : "border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
                                                         }`}
                                                 >
                                                     {mentor.isFollowing ? (
@@ -273,10 +275,10 @@ export default function PitchClient({
                                                     onClick={() => setSelectedMentorId(isSelected ? null : mentor.id)}
                                                     title={!canSelect ? "Follow this mentor to pitch to them" : ""}
                                                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${isSelected
-                                                            ? "bg-indigo-600 text-white border-indigo-600"
-                                                            : canSelect
-                                                                ? "border-slate-200 text-slate-700 bg-white hover:border-indigo-400"
-                                                                : "border-slate-100 text-slate-300 bg-white cursor-not-allowed"
+                                                        ? "bg-indigo-600 text-white border-indigo-600"
+                                                        : canSelect
+                                                            ? "border-slate-200 text-slate-700 bg-white hover:border-indigo-400"
+                                                            : "border-slate-100 text-slate-300 bg-white cursor-not-allowed"
                                                         }`}
                                                 >
                                                     {isSelected ? (

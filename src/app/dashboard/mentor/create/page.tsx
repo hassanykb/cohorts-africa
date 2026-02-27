@@ -7,7 +7,9 @@ import { useState } from "react";
 const TAGS = [
     "Career Pivot", "FinTech", "Product Management", "Engineering", "Data Science",
     "Entrepreneurship", "Marketing", "Healthcare", "Leadership", "Fundraising",
-    "Remote Work", "Legal", "Creative Arts",
+    "Remote Work", "AI/ML", "Design", "Finance", "Legal", "Public Policy",
+    "Social Impact", "Sales", "Project Management", "Agile", "Blockchain",
+    "Cybersecurity", "Strategy", "Operations",
 ];
 
 export default function CreateCircle() {
@@ -15,7 +17,7 @@ export default function CreateCircle() {
 
     const toggleTag = (tag: string) => {
         setSelectedTags((prev) =>
-            prev.includes(tag) ? prev.filter((t) => t !== tag) : prev.length < 3 ? [...prev, tag] : prev
+            prev.includes(tag) ? prev.filter((t) => t !== tag) : prev.length < 5 ? [...prev, tag] : prev
         );
     };
 
@@ -75,7 +77,7 @@ export default function CreateCircle() {
                     {/* Tags */}
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                            Focus Areas <span className="text-slate-400 font-normal">(pick up to 3)</span>
+                            Focus Areas <span className="text-slate-400 font-normal">(pick up to 5)</span>
                         </label>
                         <div className="flex flex-wrap gap-2">
                             {TAGS.map((tag) => (
@@ -84,8 +86,8 @@ export default function CreateCircle() {
                                     type="button"
                                     onClick={() => toggleTag(tag)}
                                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${selectedTags.includes(tag)
-                                            ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                                            : "bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-400"
+                                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                                        : "bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-400"
                                         }`}
                                 >
                                     {tag}

@@ -1,19 +1,25 @@
 import Link from "next/link";
-import { Search, Clock, Users, ArrowRight, MapPin, Filter } from "lucide-react";
+import { Search, Clock, Users, ArrowRight, Filter } from "lucide-react";
 import { createServerClient } from "@/lib/supabase-server";
+import { getUser } from "@/lib/get-user";
+import ProfileMenu from "@/components/ProfileMenu";
 
 async function getCircles() {
     const supabase = createServerClient();
     const { data } = await supabase
         .from("Circle")
-        .select("*")
+        .select("*, User!Circle_mentorId_fkey(name)")
         .in("status", ["OPEN", "ACTIVE", "PROPOSED"])
         .order("createdAt", { ascending: false });
     return data ?? [];
 }
 
+function initials(name: string) {
+    return name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
+}
+
 export default async function Explore() {
-    const circles = await getCircles();
+    const [circles, user] = await Promise.all([getCircles(), getUser()]);
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
@@ -24,9 +30,22 @@ export default async function Explore() {
                             <span className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold">CA</span>
                             Cohorts.Africa
                         </Link>
-                        <div className="flex items-center gap-3">
-                            <Link href="/dashboard/mentee" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">My Dashboard</Link>
-                            <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 text-sm border-2 border-white shadow-sm">ME</div>
+                        <div className="flex items-center gap-6">
+                            <div className="hidden md:flex items-center gap-6 text-sm font-medium">
+                                <Link href="/explore" className="text-indigo-600">Explore</Link>
+                                <Link href="/dashboard/mentee" className="text-slate-600 hover:text-indigo-600 transition-colors">Mentee Dashboard</Link>
+                            </div>
+                            {user && (
+                                <ProfileMenu
+                                    name={user.name}
+                                    email={user.email}
+                                    initials={initials(user.name)}
+                                    role={user.role}
+                                />
+                            )}
+                            {!user && (
+                                <Link href="/login" className="text-sm font-medium text-indigo-600 hover:text-indigo-700">Sign In</Link>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -61,35 +80,65 @@ export default async function Explore() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {circles.map((circle: Record<string, unknown>) => (
-                            <div key={circle.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all flex flex-col overflow-hidden group p-6">
-                                <div className="mb-4">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${circle.status === "PROPOSED" ? "bg-amber-100 text-amber-800" : "bg-indigo-100 text-indigo-800"
-                                            }`}>
-                                            {circle.status === "PROPOSED" ? "Mentee Pitch" : circle.status as string}
-                                        </span>
-                                        <span className="text-sm text-slate-400 flex items-center gap-1">
-                                            <Clock className="w-3.5 h-3.5" />
-                                            {circle.status === "ACTIVE" ? "In Progress" : "Open"}
-                                        </span>
+                        {circles.map((circle: any) => {
+                            const mentor = circle.User as { name: string } | null;
+                            const isOpen = circle.status === "OPEN";
+                            const isProposed = circle.status === "PROPOSED";
+                            const ctaHref = isOpen
+                                ? `/circles/apply?circleId=${circle.id}`
+                                : `/circles/${circle.id}`;
+
+                            return (
+                                <div key={circle.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all flex flex-col overflow-hidden group">
+                                    {/* Color strip */}
+                                    <div className={`h-1.5 w-full ${isProposed ? "bg-amber-400" : circle.status === "ACTIVE" ? "bg-emerald-500" : "bg-indigo-500"}`} />
+
+                                    <div className="p-6 flex flex-col flex-1">
+                                        <div className="mb-4">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isProposed ? "bg-amber-100 text-amber-800"
+                                                        : circle.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800"
+                                                            : "bg-indigo-100 text-indigo-800"
+                                                    }`}>
+                                                    {isProposed ? "Mentee Pitch" : circle.status}
+                                                </span>
+                                                <span className="text-sm text-slate-400 flex items-center gap-1">
+                                                    <Clock className="w-3.5 h-3.5" />
+                                                    {circle.status === "ACTIVE" ? "In Progress" : "Open"}
+                                                </span>
+                                            </div>
+                                            <h3 className="text-xl font-bold text-slate-900 mb-2 leading-tight group-hover:text-indigo-600 transition-colors">
+                                                {circle.title}
+                                            </h3>
+                                            <p className="text-sm text-slate-500 line-clamp-2">{circle.description}</p>
+                                            {mentor && (
+                                                <p className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+                                                    <span className="w-4 h-4 rounded-full bg-indigo-100 inline-flex items-center justify-center text-indigo-600 text-xs font-bold">
+                                                        {initials(mentor.name)}
+                                                    </span>
+                                                    {mentor.name}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                                <Users className="w-4 h-4" />
+                                                <span>{circle.maxCapacity} spots max</span>
+                                            </div>
+                                            <Link
+                                                href={ctaHref}
+                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isOpen
+                                                        ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                                                        : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                                                    }`}
+                                            >
+                                                {isOpen ? "Apply" : "Enter Room"} <ArrowRight className="w-3.5 h-3.5" />
+                                            </Link>
+                                        </div>
                                     </div>
-                                    <h3 className="text-xl font-bold text-slate-900 mb-2 leading-tight group-hover:text-indigo-600 transition-colors">
-                                        {circle.title as string}
-                                    </h3>
-                                    <p className="text-sm text-slate-500 line-clamp-2 mb-4">{circle.description as string}</p>
                                 </div>
-                                <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                                        <Users className="w-4 h-4" />
-                                        <span>{(circle.maxCapacity as number)} spots max</span>
-                                    </div>
-                                    <Link href={`/circles/apply`} className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors">
-                                        <ArrowRight className="w-5 h-5" />
-                                    </Link>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </main>
