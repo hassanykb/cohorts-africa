@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Clock, Users, ArrowRight } from "lucide-react";
+import { Search, Clock, Users, ArrowRight, X } from "lucide-react";
 import Link from "next/link";
 
 interface Circle {
@@ -10,6 +10,7 @@ interface Circle {
     description: string;
     status: string;
     maxCapacity: number;
+    durationWeeks?: number | null;
     createdAt: string;
     User: { name: string } | null;
 }
@@ -22,6 +23,7 @@ function initials(name?: string | null) {
 export default function ExploreClient({ circles: initialCircles }: { circles: Circle[] }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
+    const [selectedCircle, setSelectedCircle] = useState<Circle | null>(null);
 
     const filteredCircles = initialCircles.filter((circle) => {
         const matchesSearch =
@@ -88,9 +90,8 @@ export default function ExploreClient({ circles: initialCircles }: { circles: Ci
                         const isActive = circle.status === "ACTIVE";
                         const isProposed = circle.status === "PROPOSED";
                         const allowApplication = isOpen || isActive;
-                        const ctaHref = allowApplication
-                            ? `/circles/apply?circleId=${circle.id}`
-                            : `/circles/${circle.id}`;
+                        const ctaHref = allowApplication ? `/circles/apply?circleId=${circle.id}` : null;
+                        const ctaLabel = isOpen ? "Apply" : isActive ? "Join Waitlist" : "Awaiting Approval";
 
                         return (
                             <div key={circle.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg transition-all flex flex-col overflow-hidden group">
@@ -127,21 +128,99 @@ export default function ExploreClient({ circles: initialCircles }: { circles: Ci
                                             <Users className="w-4 h-4" />
                                             <span>{circle.maxCapacity} spots max</span>
                                         </div>
-                                        <Link
-                                            href={ctaHref}
-                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${isOpen
-                                                || isActive
-                                                ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                                                : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
-                                                }`}
-                                        >
-                                            {isOpen ? "Apply" : isActive ? "Join Waitlist" : "Enter Room"} <ArrowRight className="w-3.5 h-3.5" />
-                                        </Link>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedCircle(circle)}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all"
+                                            >
+                                                View Details
+                                            </button>
+                                            {ctaHref ? (
+                                                <Link
+                                                    href={ctaHref}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-indigo-600 text-white hover:bg-indigo-700"
+                                                >
+                                                    {ctaLabel} <ArrowRight className="w-3.5 h-3.5" />
+                                                </Link>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-600">
+                                                    {ctaLabel}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {selectedCircle && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <button
+                        type="button"
+                        onClick={() => setSelectedCircle(null)}
+                        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px]"
+                        aria-label="Close details"
+                    />
+                    <div className="relative w-full max-w-xl bg-white rounded-2xl border border-slate-200 shadow-xl p-6">
+                        <button
+                            type="button"
+                            onClick={() => setSelectedCircle(null)}
+                            className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                            aria-label="Close modal"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+
+                        <div className="pr-8">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-3 ${selectedCircle.status === "PROPOSED"
+                                ? "bg-amber-100 text-amber-800"
+                                : selectedCircle.status === "ACTIVE"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : "bg-indigo-100 text-indigo-800"
+                                }`}>
+                                {selectedCircle.status === "PROPOSED" ? "Mentee Pitch" : selectedCircle.status}
+                            </span>
+                            <h2 className="text-2xl font-bold text-slate-900 mb-2">{selectedCircle.title}</h2>
+                            <p className="text-sm text-slate-600 leading-relaxed mb-4">{selectedCircle.description}</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-xs mb-5">
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                                <p className="text-slate-400">Mentor</p>
+                                <p className="font-semibold text-slate-800">{selectedCircle.User?.name ?? "Pending assignment"}</p>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                                <p className="text-slate-400">Capacity</p>
+                                <p className="font-semibold text-slate-800">{selectedCircle.maxCapacity} participants</p>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                                <p className="text-slate-400">Duration</p>
+                                <p className="font-semibold text-slate-800">{selectedCircle.durationWeeks ?? 4} weeks</p>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                                <p className="text-slate-400">Created</p>
+                                <p className="font-semibold text-slate-800">{new Date(selectedCircle.createdAt).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+
+                        {(selectedCircle.status === "OPEN" || selectedCircle.status === "ACTIVE") ? (
+                            <Link
+                                href={`/circles/apply?circleId=${selectedCircle.id}`}
+                                onClick={() => setSelectedCircle(null)}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700"
+                            >
+                                {selectedCircle.status === "OPEN" ? "Apply to Circle" : "Join Waitlist"} <ArrowRight className="w-4 h-4" />
+                            </Link>
+                        ) : (
+                            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                This circle is still awaiting mentor approval and is not open for applications yet.
+                            </p>
+                        )}
+                    </div>
                 </div>
             )}
         </>

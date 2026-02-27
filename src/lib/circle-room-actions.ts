@@ -355,6 +355,50 @@ export async function markSessionComplete(sessionId: string, circleId: string, n
     revalidateCirclePaths(circleId);
 }
 
+export async function updateSession(sessionId: string, circleId: string, data: {
+    title: string;
+    scheduledAt: string;
+    videoCallUrl: string;
+}) {
+    const { supabase } = await requireCircleAccess(circleId, { mentorOnly: true });
+
+    const title = data.title.trim();
+    if (!title) {
+        throw new Error("Session title is required.");
+    }
+    if (!data.scheduledAt) {
+        throw new Error("Session date/time is required.");
+    }
+
+    const { data: existingSession, error: existingError } = await supabase
+        .from("CircleSession")
+        .select("id, status")
+        .eq("id", sessionId)
+        .eq("circleId", circleId)
+        .maybeSingle();
+
+    if (existingError) throw existingError;
+    if (!existingSession) {
+        throw createCircleAccessError("NOT_FOUND", "Session not found.");
+    }
+    if (existingSession.status !== "UPCOMING") {
+        throw new Error("Only upcoming sessions can be edited.");
+    }
+
+    const { error } = await supabase
+        .from("CircleSession")
+        .update({
+            title,
+            scheduledAt: data.scheduledAt,
+            videoCallUrl: data.videoCallUrl || null,
+        })
+        .eq("id", sessionId)
+        .eq("circleId", circleId);
+
+    if (error) throw error;
+    revalidateCirclePaths(circleId);
+}
+
 // ─── Resources ────────────────────────────────────────────────────────────────
 
 export async function addResource(circleId: string, data: {

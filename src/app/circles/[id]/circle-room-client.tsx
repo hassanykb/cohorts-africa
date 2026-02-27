@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 import {
     Globe2, Video, BookOpen, MessageSquare, Plus, ExternalLink,
     Clock, CheckCircle2, ArrowLeft, Trash2, Send, Calendar,
-    FileText, Link2, Youtube,
+    FileText, Link2, Youtube, Pencil,
 } from "lucide-react";
 import {
     addSession, addResource, postDiscussion, markSessionComplete, deleteResource,
-    proposeCircleUpdate, approveCircleUpdateRequest,
+    proposeCircleUpdate, approveCircleUpdateRequest, updateSession,
 } from "@/lib/circle-room-actions";
 import AppNavbar from "@/components/AppNavbar";
 
@@ -64,6 +64,13 @@ function timeAgo(dateStr: string) {
     return `${Math.floor(hrs / 24)}d ago`;
 }
 
+function toDateTimeLocalValue(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const tzOffsetMs = date.getTimezoneOffset() * 60 * 1000;
+    return new Date(date.getTime() - tzOffsetMs).toISOString().slice(0, 16);
+}
+
 export default function CircleRoomClient({
     circle, sessions: initSessions, resources: initResources, posts: initPosts, changeRequests: initChangeRequests,
     currentUser, isMentor, isCreator,
@@ -90,6 +97,11 @@ export default function CircleRoomClient({
     const [sessionTitle, setSessionTitle] = useState("");
     const [sessionDate, setSessionDate] = useState("");
     const [sessionUrl, setSessionUrl] = useState("");
+    const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+    const [editSessionTitle, setEditSessionTitle] = useState("");
+    const [editSessionDate, setEditSessionDate] = useState("");
+    const [editSessionUrl, setEditSessionUrl] = useState("");
+    const [sessionError, setSessionError] = useState("");
 
     // Resource form
     const [showResourceForm, setShowResourceForm] = useState(false);
@@ -109,15 +121,20 @@ export default function CircleRoomClient({
 
     function handleAddSession(e: React.FormEvent) {
         e.preventDefault();
+        setSessionError("");
         startTransition(async () => {
-            await addSession(circle.id, { title: sessionTitle, scheduledAt: sessionDate, videoCallUrl: sessionUrl });
-            setSessions((prev) => [...prev, {
-                id: crypto.randomUUID(), title: sessionTitle,
-                scheduledAt: sessionDate, videoCallUrl: sessionUrl || null,
-                notes: null, status: "UPCOMING",
-            }]);
-            setSessionTitle(""); setSessionDate(""); setSessionUrl("");
-            setShowSessionForm(false);
+            try {
+                await addSession(circle.id, { title: sessionTitle, scheduledAt: sessionDate, videoCallUrl: sessionUrl });
+                setSessions((prev) => [...prev, {
+                    id: crypto.randomUUID(), title: sessionTitle,
+                    scheduledAt: sessionDate, videoCallUrl: sessionUrl || null,
+                    notes: null, status: "UPCOMING",
+                }]);
+                setSessionTitle(""); setSessionDate(""); setSessionUrl("");
+                setShowSessionForm(false);
+            } catch (err: unknown) {
+                setSessionError(err instanceof Error ? err.message : "Unable to add session.");
+            }
         });
     }
 
@@ -149,9 +166,56 @@ export default function CircleRoomClient({
 
     function handleComplete(session: Session) {
         const notes = prompt("Add session notes (optional):", "") ?? "";
+        setSessionError("");
         startTransition(async () => {
-            await markSessionComplete(session.id, circle.id, notes);
-            setSessions((prev) => prev.map((s) => s.id === session.id ? { ...s, status: "COMPLETED", notes } : s));
+            try {
+                await markSessionComplete(session.id, circle.id, notes);
+                setSessions((prev) => prev.map((s) => s.id === session.id ? { ...s, status: "COMPLETED", notes } : s));
+            } catch (err: unknown) {
+                setSessionError(err instanceof Error ? err.message : "Unable to complete session.");
+            }
+        });
+    }
+
+    function startEditSession(session: Session) {
+        setSessionError("");
+        setEditingSessionId(session.id);
+        setEditSessionTitle(session.title);
+        setEditSessionDate(toDateTimeLocalValue(session.scheduledAt));
+        setEditSessionUrl(session.videoCallUrl ?? "");
+    }
+
+    function cancelEditSession() {
+        setEditingSessionId(null);
+        setEditSessionTitle("");
+        setEditSessionDate("");
+        setEditSessionUrl("");
+    }
+
+    function handleUpdateSession(e: React.FormEvent, sessionId: string) {
+        e.preventDefault();
+        setSessionError("");
+        startTransition(async () => {
+            try {
+                await updateSession(sessionId, circle.id, {
+                    title: editSessionTitle,
+                    scheduledAt: editSessionDate,
+                    videoCallUrl: editSessionUrl,
+                });
+                setSessions((prev) => prev.map((s) =>
+                    s.id === sessionId
+                        ? {
+                            ...s,
+                            title: editSessionTitle,
+                            scheduledAt: editSessionDate,
+                            videoCallUrl: editSessionUrl || null,
+                        }
+                        : s,
+                ));
+                cancelEditSession();
+            } catch (err: unknown) {
+                setSessionError(err instanceof Error ? err.message : "Unable to update session.");
+            }
         });
     }
 
@@ -423,6 +487,12 @@ export default function CircleRoomClient({
                             </form>
                         )}
 
+                        {sessionError && (
+                            <p className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+                                {sessionError}
+                            </p>
+                        )}
+
                         {upcoming.length === 0 && completed.length === 0 && (
                             <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center text-slate-400 text-sm">
                                 {isMentor ? "Schedule your first session above." : "No sessions scheduled yet. Check back soon."}
@@ -433,31 +503,85 @@ export default function CircleRoomClient({
                             <div className="space-y-3">
                                 <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wide">Upcoming</h2>
                                 {upcoming.map((s) => (
-                                    <div key={s.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-start justify-between gap-4 flex-wrap">
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" />
-                                                <h3 className="font-semibold text-slate-900">{s.title}</h3>
+                                    <div key={s.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+                                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" />
+                                                    <h3 className="font-semibold text-slate-900">{s.title}</h3>
+                                                </div>
+                                                <p className="text-sm text-slate-500 flex items-center gap-1.5">
+                                                    <Clock className="w-3.5 h-3.5" />
+                                                    {new Date(s.scheduledAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                                                </p>
                                             </div>
-                                            <p className="text-sm text-slate-500 flex items-center gap-1.5">
-                                                <Clock className="w-3.5 h-3.5" />
-                                                {new Date(s.scheduledAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-                                            </p>
+                                            <div className="flex gap-2 flex-wrap">
+                                                {s.videoCallUrl && (
+                                                    <a href={s.videoCallUrl} target="_blank" rel="noreferrer"
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition-colors">
+                                                        <Video className="w-3.5 h-3.5" /> Join Call
+                                                    </a>
+                                                )}
+                                                {isMentor && (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => startEditSession(s)}
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50"
+                                                        >
+                                                            <Pencil className="w-3.5 h-3.5" /> Edit
+                                                        </button>
+                                                        <button onClick={() => handleComplete(s)}
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50">
+                                                            <CheckCircle2 className="w-3.5 h-3.5" /> Mark Done
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2 flex-wrap">
-                                            {s.videoCallUrl && (
-                                                <a href={s.videoCallUrl} target="_blank" rel="noreferrer"
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 transition-colors">
-                                                    <Video className="w-3.5 h-3.5" /> Join Call
-                                                </a>
-                                            )}
-                                            {isMentor && (
-                                                <button onClick={() => handleComplete(s)}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50">
-                                                    <CheckCircle2 className="w-3.5 h-3.5" /> Mark Done
-                                                </button>
-                                            )}
-                                        </div>
+
+                                        {editingSessionId === s.id && isMentor && (
+                                            <form onSubmit={(e) => handleUpdateSession(e, s.id)} className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                                                <h4 className="text-sm font-semibold text-slate-700">Edit Session</h4>
+                                                <input
+                                                    required
+                                                    value={editSessionTitle}
+                                                    onChange={(e) => setEditSessionTitle(e.target.value)}
+                                                    placeholder="Session title"
+                                                    className="block w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                                />
+                                                <input
+                                                    required
+                                                    type="datetime-local"
+                                                    value={editSessionDate}
+                                                    onChange={(e) => setEditSessionDate(e.target.value)}
+                                                    className="block w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                                />
+                                                <input
+                                                    type="url"
+                                                    value={editSessionUrl}
+                                                    onChange={(e) => setEditSessionUrl(e.target.value)}
+                                                    placeholder="Video call link (optional)"
+                                                    className="block w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                                />
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={cancelEditSession}
+                                                        className="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-white"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        type="submit"
+                                                        disabled={isPending}
+                                                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50"
+                                                    >
+                                                        Save Changes
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        )}
                                     </div>
                                 ))}
                             </div>

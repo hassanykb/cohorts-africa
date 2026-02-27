@@ -3,13 +3,10 @@ import { redirect } from "next/navigation";
 import {
     AlertCircle,
     ArrowRight,
-    BookOpen,
     Clock,
     Inbox,
     Linkedin,
-    PlusCircle,
     ShieldCheck,
-    Trophy,
     Users,
 } from "lucide-react";
 import { getUser } from "@/lib/get-user";
@@ -120,41 +117,10 @@ export default async function MenteeDashboard() {
             <AppNavbar user={user} active="dashboard" />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="mb-8">
                     <div>
                         <h1 className="text-3xl font-extrabold text-slate-900">Welcome, {firstName} 👋</h1>
                         <p className="text-slate-500 mt-1">Manage circles, track applications, and jump into sessions faster.</p>
-                    </div>
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 min-w-[250px]">
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
-                                <Trophy className="w-3.5 h-3.5 text-amber-500" /> Reputation Score
-                            </p>
-                            <span className="text-lg font-extrabold text-slate-900">{user.reputationScore}</span>
-                        </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2">
-                            <div className={`h-2 rounded-full transition-all ${score.bar}`} style={{ width: `${user.reputationScore}%` }} />
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1.5 mb-3">{score.label}</p>
-
-                        <div className="flex items-center gap-2">
-                            <a
-                                href={`https://www.linkedin.com/sharing/share-offsite/?url=https://cohortsnetwork.com&summary=I just reached a reputation score of ${user.reputationScore} on Cohorts Network! 🚀`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-[#0077B5] text-white text-[10px] font-bold hover:bg-[#006097] transition-colors cursor-pointer"
-                            >
-                                <Linkedin className="w-3 h-3" /> Share
-                            </a>
-                            <a
-                                href={`https://twitter.com/intent/tweet?text=I just reached a reputation score of ${user.reputationScore} on Cohorts Network! 🚀 join me at https://cohortsnetwork.com`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-black text-white text-[10px] font-bold hover:bg-slate-800 transition-colors cursor-pointer"
-                            >
-                                <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.134l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg> Tweet
-                            </a>
-                        </div>
                     </div>
                 </div>
 
@@ -329,7 +295,7 @@ export default async function MenteeDashboard() {
 
                     <aside className="space-y-6">
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                            <div className="flex items-center gap-3 mb-3">
+                            <div className="flex items-center gap-3 mb-4">
                                 <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-lg">
                                     {initials(user.name)}
                                 </div>
@@ -338,27 +304,37 @@ export default async function MenteeDashboard() {
                                     <p className="text-xs text-slate-500">{user.email}</p>
                                 </div>
                             </div>
-                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${score.badge}`}>
-                                <ShieldCheck className="w-3.5 h-3.5" />
-                                {user.reputationScore} Reputation Points
-                            </div>
-                        </div>
 
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">Quick Actions</h3>
-                            <div className="space-y-2">
-                                <Link href="/explore" className="flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-colors group">
-                                    <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200">
-                                        <BookOpen className="w-4 h-4 text-indigo-600" />
-                                    </div>
-                                    <span className="text-sm font-medium text-slate-700 group-hover:text-indigo-700">Browse Open Circles</span>
-                                </Link>
-                                <Link href="/pitch" className="flex items-center gap-3 p-3 rounded-xl hover:bg-amber-50 transition-colors group">
-                                    <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-200">
-                                        <PlusCircle className="w-4 h-4 text-amber-600" />
-                                    </div>
-                                    <span className="text-sm font-medium text-slate-700 group-hover:text-amber-700">Pitch a Custom Circle</span>
-                                </Link>
+                            <div className="border border-slate-200 rounded-xl p-3 bg-slate-50">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                                        <ShieldCheck className="w-3.5 h-3.5 text-amber-500" /> Reputation Score
+                                    </p>
+                                    <span className="text-lg font-extrabold text-slate-900">{user.reputationScore}</span>
+                                </div>
+                                <div className="w-full bg-slate-200 rounded-full h-2">
+                                    <div className={`h-2 rounded-full transition-all ${score.bar}`} style={{ width: `${user.reputationScore}%` }} />
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1.5 mb-3">{score.label}</p>
+
+                                <div className="flex items-center gap-2">
+                                    <a
+                                        href={`https://www.linkedin.com/sharing/share-offsite/?url=https://cohortsnetwork.com&summary=I just reached a reputation score of ${user.reputationScore} on Cohorts Network! 🚀`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-[#0077B5] text-white text-[10px] font-bold hover:bg-[#006097] transition-colors cursor-pointer"
+                                    >
+                                        <Linkedin className="w-3 h-3" /> Share
+                                    </a>
+                                    <a
+                                        href={`https://twitter.com/intent/tweet?text=I just reached a reputation score of ${user.reputationScore} on Cohorts Network! 🚀 join me at https://cohortsnetwork.com`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-black text-white text-[10px] font-bold hover:bg-slate-800 transition-colors cursor-pointer"
+                                    >
+                                        <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.134l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg> Tweet
+                                    </a>
+                                </div>
                             </div>
                         </div>
 
