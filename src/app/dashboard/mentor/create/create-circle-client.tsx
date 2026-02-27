@@ -197,7 +197,10 @@ export default function CreateCircle({ user }: { user: CreateCircleUser }) {
                             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                                 Duration <span className="text-rose-500">*</span>
                             </label>
-                            <select className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                            <select
+                                name="durationWeeks"
+                                className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                            >
                                 {[2, 4, 6, 8].map((w) => (
                                     <option key={w} value={w}>{w} weeks</option>
                                 ))}

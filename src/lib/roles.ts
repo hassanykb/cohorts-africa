@@ -6,3 +6,9 @@ export function getDefaultDashboardPath(_role?: string | null): "/dashboard/ment
     void _role;
     return "/dashboard/mentee";
 }
+
+export function getRoleLabel(role?: string | null): string {
+    if (role === "ADMIN") return "Admin";
+    if (role === "SPONSOR") return "Sponsor";
+    return "Member";
+}

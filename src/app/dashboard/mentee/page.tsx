@@ -3,10 +3,20 @@ import { redirect } from "next/navigation";
 import {
     ShieldCheck, BookOpen, Clock, CheckCircle,
     AlertCircle, ArrowRight, PlusCircle, Trophy,
-    Linkedin,
+    Linkedin, Users, Inbox,
 } from "lucide-react";
 import { getUser } from "@/lib/get-user";
-import { getApplicationsByMentee, getDraftCirclesByCreator } from "@/lib/actions";
+import {
+    acceptPitch,
+    closeCircleApplications,
+    declinePitch,
+    getApplicationsByMentee,
+    getCirclesByCreator,
+    getCirclesByMentor,
+    getDraftCirclesByCreator,
+    getPitchRequestsForMentor,
+    reopenCircleApplications,
+} from "@/lib/actions";
 import AppNavbar from "@/components/AppNavbar";
 
 function initials(name?: string | null) {
@@ -24,9 +34,12 @@ export default async function MenteeDashboard() {
     const user = await getUser();
     if (!user) redirect("/login");
 
-    const [applicationsResult, draftsResult] = await Promise.allSettled([
+    const [applicationsResult, draftsResult, mentorCirclesResult, creatorCirclesResult, pitchesResult] = await Promise.allSettled([
         getApplicationsByMentee(user.id),
         getDraftCirclesByCreator(user.id),
+        getCirclesByMentor(user.id),
+        getCirclesByCreator(user.id),
+        getPitchRequestsForMentor(user.id),
     ]);
     if (applicationsResult.status === "rejected") {
         console.error("Mentee dashboard: failed to load applications", applicationsResult.reason);
@@ -34,13 +47,38 @@ export default async function MenteeDashboard() {
     if (draftsResult.status === "rejected") {
         console.error("Mentee dashboard: failed to load drafts", draftsResult.reason);
     }
+    if (mentorCirclesResult.status === "rejected") {
+        console.error("Mentee dashboard: failed to load mentor circles", mentorCirclesResult.reason);
+    }
+    if (creatorCirclesResult.status === "rejected") {
+        console.error("Mentee dashboard: failed to load creator circles", creatorCirclesResult.reason);
+    }
+    if (pitchesResult.status === "rejected") {
+        console.error("Mentee dashboard: failed to load pitch requests", pitchesResult.reason);
+    }
 
     const applications = applicationsResult.status === "fulfilled" ? applicationsResult.value : [];
     const drafts = draftsResult.status === "fulfilled" ? draftsResult.value : [];
+    const mentorCircles = mentorCirclesResult.status === "fulfilled" ? mentorCirclesResult.value : [];
+    const creatorCircles = creatorCirclesResult.status === "fulfilled" ? creatorCirclesResult.value : [];
+    const pitches = pitchesResult.status === "fulfilled" ? pitchesResult.value : [];
 
     const active = applications.filter((a: Record<string, unknown>) => a.status === "ACCEPTED");
     const waitlisted = applications.filter((a: Record<string, unknown>) => a.status === "WAITLIST");
     const pending = applications.filter((a: Record<string, unknown>) => a.status === "PENDING" || a.status === "REJECTED");
+    const managedCircleMap = new Map<string, Record<string, unknown>>();
+    [...mentorCircles, ...creatorCircles].forEach((circle) => {
+        const key = String(circle.id ?? "");
+        if (!key) return;
+        if (!managedCircleMap.has(key)) {
+            managedCircleMap.set(key, circle as Record<string, unknown>);
+        }
+    });
+    const managedCircles = Array.from(managedCircleMap.values()).sort((a, b) => {
+        const aTime = new Date(String(a.updatedAt ?? a.createdAt ?? 0)).getTime();
+        const bTime = new Date(String(b.updatedAt ?? b.createdAt ?? 0)).getTime();
+        return bTime - aTime;
+    });
     const score = scoreColor(user.reputationScore);
     const firstName = user.name?.split(" ")[0] ?? "there";
 
@@ -91,6 +129,160 @@ export default async function MenteeDashboard() {
                 <div className="grid lg:grid-cols-3 gap-8">
                     {/* Left column */}
                     <div className="lg:col-span-2 space-y-8">
+                        <section>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-slate-900">Circles You Manage</h2>
+                                <Link href="/pitch" className="text-sm text-indigo-600 hover:underline font-medium flex items-center gap-1">
+                                    Start circle <ArrowRight className="w-4 h-4" />
+                                </Link>
+                            </div>
+                            {managedCircles.length === 0 ? (
+                                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-400 text-sm">
+                                    You are not managing any circles yet.
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {managedCircles.map((circle: Record<string, unknown>) => {
+                                        const applicationsForCircle = (circle.Application as Array<{ status?: string }>) ?? [];
+                                        const filledApps = applicationsForCircle.filter((app) => app.status === "PENDING" || app.status === "ACCEPTED").length;
+                                        const waitlistedApps = applicationsForCircle.filter((app) => app.status === "WAITLIST").length;
+                                        const status = String(circle.status ?? "UNKNOWN");
+                                        const maxCapacity = Number(circle.maxCapacity ?? 0);
+                                        const durationWeeks = Number(circle.durationWeeks ?? 4);
+                                        const isMentorForCircle = circle.mentorId === user.id;
+                                        const isOrganizerForCircle = circle.creatorId === user.id;
+                                        const canReopen = status === "ACTIVE" && filledApps < maxCapacity;
+                                        const needsDualApproval = Boolean(circle.mentorId) && circle.creatorId !== circle.mentorId;
+
+                                        const statusClass = status === "ACTIVE"
+                                            ? "bg-emerald-100 text-emerald-800"
+                                            : status === "OPEN"
+                                                ? "bg-indigo-100 text-indigo-800"
+                                                : status === "PROPOSED"
+                                                    ? "bg-amber-100 text-amber-800"
+                                                    : status === "DRAFT"
+                                                        ? "bg-slate-100 text-slate-600"
+                                                        : "bg-slate-100 text-slate-600";
+
+                                        return (
+                                            <div key={circle.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="min-w-0">
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${statusClass}`}>
+                                                            {status}
+                                                        </span>
+                                                        <h3 className="text-base font-semibold text-slate-900 truncate">{circle.title as string}</h3>
+                                                        <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
+                                                            <span className="flex items-center gap-1">
+                                                                <Users className="w-3.5 h-3.5" />
+                                                                {filledApps}/{maxCapacity} filled
+                                                            </span>
+                                                            {waitlistedApps > 0 && <span>{waitlistedApps} waitlisted</span>}
+                                                            <span>{durationWeeks} weeks</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-2">
+                                                            {isOrganizerForCircle && (
+                                                                <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-700">
+                                                                    Organizer
+                                                                </span>
+                                                            )}
+                                                            {isMentorForCircle && (
+                                                                <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">
+                                                                    Mentor
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {needsDualApproval && (
+                                                            <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 inline-block">
+                                                                Capacity and duration changes need both organizer and mentor approval.
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        <Link
+                                                            href={`/circles/${circle.id as string}`}
+                                                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700"
+                                                        >
+                                                            Open Room
+                                                        </Link>
+                                                        {isMentorForCircle && status === "OPEN" && (
+                                                            <form>
+                                                                <button
+                                                                    formAction={async () => { "use server"; await closeCircleApplications(circle.id as string, user.id); }}
+                                                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                                >
+                                                                    Close Apps
+                                                                </button>
+                                                            </form>
+                                                        )}
+                                                        {isMentorForCircle && status === "ACTIVE" && (
+                                                            <form>
+                                                                <button
+                                                                    disabled={!canReopen}
+                                                                    formAction={async () => { "use server"; await reopenCircleApplications(circle.id as string, user.id); }}
+                                                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                                >
+                                                                    Reopen Apps
+                                                                </button>
+                                                            </form>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </section>
+
+                        <section>
+                            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                                Incoming Pitch Requests
+                                {pitches.length > 0 && (
+                                    <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">
+                                        {pitches.length}
+                                    </span>
+                                )}
+                            </h2>
+                            {pitches.length === 0 ? (
+                                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-400 text-sm">
+                                    <Inbox className="w-8 h-8 mx-auto mb-2 text-slate-200" />
+                                    No pitch requests yet.
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {pitches.map((pitch: Record<string, unknown>) => {
+                                        const creator = pitch.User as { name: string; email: string } | null;
+                                        return (
+                                            <div key={pitch.id as string} className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 mb-3">
+                                                    Awaiting your response
+                                                </span>
+                                                <h3 className="text-base font-semibold text-slate-900 mb-1">{pitch.title as string}</h3>
+                                                <p className="text-sm text-slate-500 mb-4">
+                                                    Proposed by <span className="font-medium text-slate-700">{creator?.name ?? "a member"}</span>
+                                                </p>
+                                                <form className="flex gap-2">
+                                                    <button
+                                                        formAction={async () => { "use server"; await acceptPitch(pitch.id as string, user.id); }}
+                                                        className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                                                    >
+                                                        Accept
+                                                    </button>
+                                                    <button
+                                                        formAction={async () => { "use server"; await declinePitch(pitch.id as string); }}
+                                                        className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors"
+                                                    >
+                                                        Decline
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </section>
+
                         {/* Active Circles */}
                         <section>
                             <div className="flex items-center justify-between mb-4">

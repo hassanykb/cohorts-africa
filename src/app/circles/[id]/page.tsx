@@ -31,8 +31,10 @@ export default async function CircleRoomPage({ params }: { params: Promise<{ id:
             sessions={room.sessions}
             resources={room.resources}
             posts={room.posts}
+            changeRequests={room.changeRequests}
             currentUser={user}
             isMentor={room.isMentor}
+            isCreator={room.isCreator}
         />
     );
 }

@@ -49,6 +49,18 @@ export async function getCirclesByMentor(mentorId: string) {
     return data ?? [];
 }
 
+export async function getCirclesByCreator(creatorId: string) {
+    const supabase = createServerClient();
+    const { data, error } = await supabase
+        .from("Circle")
+        .select("*, Application(id, status)")
+        .eq("creatorId", creatorId)
+        .order("createdAt", { ascending: false });
+
+    if (error) throw error;
+    return data ?? [];
+}
+
 export async function getPitchRequestsForMentor(mentorId: string) {
     const supabase = createServerClient();
     const { data, error } = await supabase
@@ -100,8 +112,10 @@ export async function createCircle(formData: FormData, mentorId: string, options
 
     const titleInput = formData.get("title");
     const descriptionInput = formData.get("description");
+    const durationInput = formData.get("durationWeeks");
     const title = typeof titleInput === "string" ? titleInput.trim() : "";
     const description = typeof descriptionInput === "string" ? descriptionInput.trim() : "";
+    const durationWeeks = Number(durationInput ?? 4);
 
     const resolvedTitle = title || (asDraft ? "Untitled Draft Circle" : "");
     const resolvedDescription = description || (asDraft ? "Draft description" : "");
@@ -117,6 +131,7 @@ export async function createCircle(formData: FormData, mentorId: string, options
         title: resolvedTitle,
         description: resolvedDescription,
         maxCapacity: Number(formData.get("capacity") ?? 10),
+        durationWeeks: Number.isFinite(durationWeeks) && durationWeeks > 0 ? durationWeeks : 4,
         status: asDraft ? "DRAFT" : "OPEN",
         createdAt: now,
         updatedAt: now,
@@ -133,6 +148,7 @@ export async function savePitchDraft(data: {
     mentorId?: string | null;
     title?: string;
     description?: string;
+    durationWeeks?: number;
 }) {
     const supabase = createServerClient();
     const now = new Date().toISOString();
@@ -148,6 +164,7 @@ export async function savePitchDraft(data: {
         title,
         description,
         maxCapacity: 10,
+        durationWeeks: data.durationWeeks ?? 4,
         status: "DRAFT",
         createdAt: now,
         updatedAt: now,
@@ -334,6 +351,7 @@ export async function submitPitch(data: {
     title: string;
     description: string;
     tags: string[];
+    durationWeeks?: number;
 }) {
     const supabase = createServerClient();
 
@@ -355,6 +373,7 @@ export async function submitPitch(data: {
         title: data.title,
         description: data.description,
         maxCapacity: 10,
+        durationWeeks: data.durationWeeks ?? 4,
         status: "PROPOSED",
         createdAt: now,
         updatedAt: now,

@@ -4,6 +4,7 @@ import { signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { LogOut, Settings, User2, ChevronDown } from "lucide-react";
+import { getRoleLabel } from "@/lib/roles";
 
 type Props = {
     name: string;
@@ -16,6 +17,7 @@ type Props = {
 export default function ProfileMenu({ name, email, initials, role, avatarUrl }: Props) {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
+    const roleLabel = getRoleLabel(role);
 
     // Close on click outside
     useEffect(() => {
@@ -58,7 +60,7 @@ export default function ProfileMenu({ name, email, initials, role, avatarUrl }: 
                             <p className="font-semibold text-slate-900 text-sm truncate">{name}</p>
                             <p className="text-xs text-slate-500 truncate">{email}</p>
                             <span className="inline-flex items-center mt-0.5 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-semibold">
-                                {role}
+                                {roleLabel}
                             </span>
                         </div>
                     </div>
@@ -88,14 +90,6 @@ export default function ProfileMenu({ name, email, initials, role, avatarUrl }: 
                         >
                             <ChevronDown className="w-4 h-4 -rotate-90" />
                             Dashboard
-                        </Link>
-                        <Link
-                            href="/dashboard/mentor"
-                            onClick={() => setOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-emerald-600 hover:bg-emerald-50 transition-colors"
-                        >
-                            <ChevronDown className="w-4 h-4 -rotate-90" />
-                            Mentor View
                         </Link>
                     </div>
 

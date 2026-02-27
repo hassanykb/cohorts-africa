@@ -29,6 +29,12 @@ enum AppStatus {
   REJECTED
 }
 
+enum ChangeRequestStatus {
+  PENDING
+  APPLIED
+  REJECTED
+}
+
 model User {
   id              String   @id @default(cuid())
   role            Role     @default(BOTH)
@@ -49,6 +55,9 @@ model User {
 
   // Applications submitted by this user
   applications Application[]
+
+  // Circle updates requested by this user
+  changeRequestsProposed CircleChangeRequest[] @relation("ProposedCircleChanges")
 }
 
 model Circle {
@@ -58,6 +67,7 @@ model Circle {
   title       String
   description String       @db.Text
   maxCapacity Int
+  durationWeeks Int      @default(4)
   status      CircleStatus @default(PROPOSED)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -66,6 +76,7 @@ model Circle {
   mentor       User?         @relation("MentoringCircles", fields: [mentorId], references: [id])
   applications Application[]
   sessions     Session[]
+  changeRequests CircleChangeRequest[]
 }
 
 model Application {
@@ -91,4 +102,21 @@ model Session {
   updatedAt DateTime @updatedAt
 
   circle Circle @relation(fields: [circleId], references: [id])
+}
+
+model CircleChangeRequest {
+  id               String              @id @default(cuid())
+  circleId         String
+  proposedById     String
+  newMaxCapacity   Int?
+  newDurationWeeks Int?
+  notes            String?             @db.Text
+  status           ChangeRequestStatus @default(PENDING)
+  creatorApproved  Boolean             @default(false)
+  mentorApproved   Boolean             @default(false)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  circle      Circle @relation(fields: [circleId], references: [id])
+  proposedBy  User   @relation("ProposedCircleChanges", fields: [proposedById], references: [id])
 }

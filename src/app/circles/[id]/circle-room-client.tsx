@@ -2,13 +2,15 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
     Globe2, Video, BookOpen, MessageSquare, Plus, ExternalLink,
     Clock, CheckCircle2, ArrowLeft, Trash2, Send, Calendar,
     FileText, Link2, Youtube,
 } from "lucide-react";
 import {
-    addSession, addResource, postDiscussion, markSessionComplete,
+    addSession, addResource, postDiscussion, markSessionComplete, deleteResource,
+    proposeCircleUpdate, approveCircleUpdateRequest,
 } from "@/lib/circle-room-actions";
 import AppNavbar from "@/components/AppNavbar";
 
@@ -26,7 +28,20 @@ type Post = {
 };
 type Circle = {
     id: string; title: string; description: string; status: string;
+    creatorId: string; mentorId: string | null;
+    maxCapacity: number; durationWeeks: number;
     User: { name: string; email: string } | null;
+};
+type ChangeRequest = {
+    id: string;
+    newMaxCapacity: number | null;
+    newDurationWeeks: number | null;
+    notes: string | null;
+    creatorApproved: boolean;
+    mentorApproved: boolean;
+    proposedById: string;
+    createdAt: string;
+    User: { name: string } | null;
 };
 type AppUser = { id: string; name: string; email: string; role: string };
 
@@ -50,20 +65,24 @@ function timeAgo(dateStr: string) {
 }
 
 export default function CircleRoomClient({
-    circle, sessions: initSessions, resources: initResources, posts: initPosts,
-    currentUser, isMentor,
+    circle, sessions: initSessions, resources: initResources, posts: initPosts, changeRequests: initChangeRequests,
+    currentUser, isMentor, isCreator,
 }: {
     circle: Circle;
     sessions: Session[];
     resources: Resource[];
     posts: Post[];
+    changeRequests: ChangeRequest[];
     currentUser: AppUser;
     isMentor: boolean;
+    isCreator: boolean;
 }) {
+    const router = useRouter();
     const [tab, setTab] = useState<"sessions" | "resources" | "discussion">("sessions");
     const [sessions, setSessions] = useState(initSessions);
     const [resources, setResources] = useState(initResources);
     const [posts, setPosts] = useState(initPosts);
+    const [changeRequests, setChangeRequests] = useState(initChangeRequests);
     const [isPending, startTransition] = useTransition();
 
     // Session form
@@ -80,6 +99,13 @@ export default function CircleRoomClient({
 
     // Discussion
     const [newPost, setNewPost] = useState("");
+
+    // Circle changes
+    const [capacityTarget, setCapacityTarget] = useState("");
+    const [extendWeeks, setExtendWeeks] = useState("0");
+    const [changeNote, setChangeNote] = useState("");
+    const [changeMessage, setChangeMessage] = useState("");
+    const [changeError, setChangeError] = useState("");
 
     function handleAddSession(e: React.FormEvent) {
         e.preventDefault();
@@ -129,8 +155,68 @@ export default function CircleRoomClient({
         });
     }
 
+    function handleDeleteResource(resourceId: string) {
+        startTransition(async () => {
+            await deleteResource(resourceId, circle.id);
+            setResources((prev) => prev.filter((resource) => resource.id !== resourceId));
+        });
+    }
+
+    function handleProposeCircleUpdate(e: React.FormEvent) {
+        e.preventDefault();
+        setChangeError("");
+        setChangeMessage("");
+
+        const parsedCapacity = Number(capacityTarget);
+        const parsedExtend = Number(extendWeeks);
+        const newMaxCapacity = Number.isFinite(parsedCapacity) && parsedCapacity > circle.maxCapacity
+            ? parsedCapacity
+            : null;
+        const extendByWeeks = Number.isFinite(parsedExtend) && parsedExtend > 0
+            ? parsedExtend
+            : null;
+
+        startTransition(async () => {
+            try {
+                const result = await proposeCircleUpdate(circle.id, {
+                    newMaxCapacity,
+                    extendByWeeks,
+                    notes: changeNote,
+                });
+                setChangeMessage(result.message);
+                setChangeNote("");
+                setExtendWeeks("0");
+                setCapacityTarget("");
+                router.refresh();
+            } catch (err: unknown) {
+                setChangeError(err instanceof Error ? err.message : "Unable to submit circle change.");
+            }
+        });
+    }
+
+    function handleApproveChangeRequest(requestId: string) {
+        setChangeError("");
+        setChangeMessage("");
+        startTransition(async () => {
+            try {
+                const result = await approveCircleUpdateRequest(circle.id, requestId);
+                setChangeMessage(
+                    result.status === "APPLIED"
+                        ? "Request approved and changes applied."
+                        : "Request approved. Waiting for second approval.",
+                );
+                setChangeRequests((prev) => prev.filter((request) => request.id !== requestId));
+                router.refresh();
+            } catch (err: unknown) {
+                setChangeError(err instanceof Error ? err.message : "Unable to approve request.");
+            }
+        });
+    }
+
     const upcoming = sessions.filter((s) => s.status === "UPCOMING");
     const completed = sessions.filter((s) => s.status === "COMPLETED");
+    const canManageCircle = isMentor || isCreator;
+    const requiresDualApproval = Boolean(circle.mentorId) && circle.creatorId !== circle.mentorId;
 
     const TABS = [
         { key: "sessions", label: "Sessions", icon: <Calendar className="w-4 h-4" /> },
@@ -166,12 +252,124 @@ export default function CircleRoomClient({
                             )}
                             <p className="text-sm text-slate-600 mt-2 max-w-xl">{circle.description}</p>
                         </div>
-                        <div className="flex gap-2 items-center">
+                        <div className="flex gap-2 items-center flex-wrap justify-end">
                             <span className="text-xs text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
                                 {sessions.length} session{sessions.length !== 1 ? "s" : ""} scheduled
                             </span>
+                            <span className="text-xs text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
+                                Capacity: {circle.maxCapacity}
+                            </span>
+                            <span className="text-xs text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
+                                Duration: {circle.durationWeeks} week{circle.durationWeeks === 1 ? "" : "s"}
+                            </span>
                         </div>
                     </div>
+
+                    {canManageCircle && (
+                        <div className="mt-5 pt-5 border-t border-slate-100 space-y-4">
+                            <h2 className="text-sm font-bold text-slate-700">Circle Management</h2>
+                            {requiresDualApproval ? (
+                                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                    Capacity and duration updates on pitched circles require approval from both organizer and mentor.
+                                </p>
+                            ) : (
+                                <p className="text-xs text-slate-500">
+                                    You can directly increase capacity or extend duration.
+                                </p>
+                            )}
+
+                            <form onSubmit={handleProposeCircleUpdate} className="grid sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">New Capacity</label>
+                                    <input
+                                        type="number"
+                                        min={circle.maxCapacity + 1}
+                                        value={capacityTarget}
+                                        onChange={(e) => setCapacityTarget(e.target.value)}
+                                        placeholder={String(circle.maxCapacity + 1)}
+                                        className="block w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Extend By (weeks)</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        value={extendWeeks}
+                                        onChange={(e) => setExtendWeeks(e.target.value)}
+                                        className="block w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+                                <div className="sm:col-span-3">
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Notes (optional)</label>
+                                    <input
+                                        type="text"
+                                        value={changeNote}
+                                        onChange={(e) => setChangeNote(e.target.value)}
+                                        placeholder="Why this update is needed..."
+                                        className="block w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+                                <div className="sm:col-span-3 flex justify-end">
+                                    <button
+                                        type="submit"
+                                        disabled={isPending}
+                                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
+                                    >
+                                        {isPending ? "Submitting..." : "Submit Change"}
+                                    </button>
+                                </div>
+                            </form>
+
+                            {changeRequests.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-xs font-semibold text-slate-600">Pending Change Requests</p>
+                                    {changeRequests.map((request) => {
+                                        const currentUserApproved = isMentor ? request.mentorApproved : isCreator ? request.creatorApproved : true;
+                                        const proposerName = request.User?.name ?? "Member";
+                                        return (
+                                            <div key={request.id} className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+                                                <p className="text-sm text-slate-700">
+                                                    {request.newMaxCapacity !== null && <>Capacity → <strong>{request.newMaxCapacity}</strong> </>}
+                                                    {request.newDurationWeeks !== null && <>Duration → <strong>{request.newDurationWeeks} weeks</strong></>}
+                                                </p>
+                                                <p className="text-xs text-slate-500 mt-1">
+                                                    Proposed by {proposerName} · {new Date(request.createdAt).toLocaleString()}
+                                                </p>
+                                                {request.notes && <p className="text-xs text-slate-500 mt-1">{request.notes}</p>}
+                                                <p className="text-xs text-slate-500 mt-1">
+                                                    Organizer: {request.creatorApproved ? "approved" : "pending"} · Mentor: {request.mentorApproved ? "approved" : "pending"}
+                                                </p>
+                                                {!currentUserApproved && (
+                                                    <div className="mt-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleApproveChangeRequest(request.id)}
+                                                            disabled={isPending}
+                                                            className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50"
+                                                        >
+                                                            Approve
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {changeError && (
+                                <p className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+                                    {changeError}
+                                </p>
+                            )}
+                            {changeMessage && (
+                                <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                                    {changeMessage}
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Tabs */}
@@ -337,7 +535,11 @@ export default function CircleRoomClient({
                                             </div>
                                         </div>
                                         {(isMentor || r.User?.name === currentUser.name) && (
-                                            <button className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors flex-shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteResource(r.id)}
+                                                className="p-1.5 text-slate-300 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors flex-shrink-0"
+                                            >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         )}

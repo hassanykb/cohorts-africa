@@ -7,11 +7,33 @@ import { getUser } from "@/lib/get-user";
 type CircleAccessErrorCode = "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND";
 type CircleAccessError = Error & { code: CircleAccessErrorCode };
 type QueryError = { code?: string | null; message?: string | null };
+type CircleRow = {
+    id: string;
+    mentorId: string | null;
+    creatorId: string;
+    maxCapacity: number;
+    durationWeeks: number;
+    status: string;
+};
+type CircleChangeRequestRow = {
+    id: string;
+    newMaxCapacity: number | null;
+    newDurationWeeks: number | null;
+    notes: string | null;
+    status: string;
+    creatorApproved: boolean;
+    mentorApproved: boolean;
+    proposedById: string;
+    createdAt: string;
+    User?: unknown;
+};
 
 type CircleAccessContext = {
     supabase: ReturnType<typeof createServerClient>;
     userId: string;
     isMentor: boolean;
+    isCreator: boolean;
+    circle: CircleRow;
 };
 
 function createCircleAccessError(code: CircleAccessErrorCode, message: string): CircleAccessError {
@@ -46,7 +68,7 @@ async function requireCircleAccess(circleId: string, options?: { mentorOnly?: bo
     const supabase = createServerClient();
     const { data: circle, error: circleError } = await supabase
         .from("Circle")
-        .select("id, mentorId")
+        .select("id, mentorId, creatorId, maxCapacity, durationWeeks, status")
         .eq("id", circleId)
         .maybeSingle();
 
@@ -56,9 +78,10 @@ async function requireCircleAccess(circleId: string, options?: { mentorOnly?: bo
     }
 
     const isMentor = circle.mentorId === user.id;
+    const isCreator = circle.creatorId === user.id;
     let isAcceptedMentee = false;
 
-    if (!isMentor) {
+    if (!isMentor && !isCreator) {
         const { data: membership, error: membershipError } = await supabase
             .from("Application")
             .select("id")
@@ -71,7 +94,7 @@ async function requireCircleAccess(circleId: string, options?: { mentorOnly?: bo
         isAcceptedMentee = Boolean(membership);
     }
 
-    if (!isMentor && !isAcceptedMentee) {
+    if (!isMentor && !isCreator && !isAcceptedMentee) {
         throw createCircleAccessError("FORBIDDEN", "You are not a member of this circle.");
     }
 
@@ -79,20 +102,119 @@ async function requireCircleAccess(circleId: string, options?: { mentorOnly?: bo
         throw createCircleAccessError("FORBIDDEN", "Only the mentor can perform this action.");
     }
 
-    return { supabase, userId: user.id, isMentor };
+    return {
+        supabase,
+        userId: user.id,
+        isMentor,
+        isCreator,
+        circle: {
+            id: circle.id,
+            mentorId: circle.mentorId,
+            creatorId: circle.creatorId,
+            maxCapacity: circle.maxCapacity ?? 10,
+            durationWeeks: circle.durationWeeks ?? 4,
+            status: circle.status ?? "OPEN",
+        },
+    };
+}
+
+function revalidateCirclePaths(circleId: string) {
+    revalidatePath(`/circles/${circleId}`);
+    revalidatePath("/dashboard/mentor");
+    revalidatePath("/dashboard/mentee");
+    revalidatePath("/explore");
+}
+
+async function getFilledApplicationCount(
+    supabase: ReturnType<typeof createServerClient>,
+    circleId: string,
+): Promise<number> {
+    const { data, error } = await supabase
+        .from("Application")
+        .select("status")
+        .eq("circleId", circleId)
+        .in("status", ["PENDING", "ACCEPTED"]);
+
+    if (error) throw error;
+    return (data ?? []).length;
+}
+
+async function promoteWaitlistedApplications(
+    supabase: ReturnType<typeof createServerClient>,
+    circleId: string,
+    maxCapacity: number,
+): Promise<number> {
+    const { data: applications, error } = await supabase
+        .from("Application")
+        .select("id, status")
+        .eq("circleId", circleId)
+        .order("createdAt", { ascending: true });
+
+    if (error) throw error;
+
+    const rows = applications ?? [];
+    const filled = rows.filter((item) => item.status === "PENDING" || item.status === "ACCEPTED").length;
+    const availableSlots = maxCapacity - filled;
+    if (availableSlots <= 0) return 0;
+
+    const waitlistIds = rows
+        .filter((item) => item.status === "WAITLIST")
+        .slice(0, availableSlots)
+        .map((item) => item.id);
+
+    if (waitlistIds.length === 0) return 0;
+
+    const now = new Date().toISOString();
+    const { error: promoteError } = await supabase
+        .from("Application")
+        .update({ status: "PENDING", updatedAt: now })
+        .in("id", waitlistIds)
+        .eq("circleId", circleId);
+
+    if (promoteError) throw promoteError;
+    return waitlistIds.length;
+}
+
+async function applyCircleValues(
+    supabase: ReturnType<typeof createServerClient>,
+    circleId: string,
+    values: { newMaxCapacity: number | null; newDurationWeeks: number | null },
+) {
+    const payload: { maxCapacity?: number; durationWeeks?: number; updatedAt: string } = {
+        updatedAt: new Date().toISOString(),
+    };
+    if (values.newMaxCapacity !== null) payload.maxCapacity = values.newMaxCapacity;
+    if (values.newDurationWeeks !== null) payload.durationWeeks = values.newDurationWeeks;
+
+    const { error } = await supabase
+        .from("Circle")
+        .update(payload)
+        .eq("id", circleId);
+
+    if (error) throw error;
+
+    if (typeof payload.maxCapacity === "number") {
+        await promoteWaitlistedApplications(supabase, circleId, payload.maxCapacity);
+    }
 }
 
 // ─── Circle Room Data ─────────────────────────────────────────────────────────
 
 export async function getCircleRoom(circleId: string) {
-    const { supabase, isMentor } = await requireCircleAccess(circleId);
+    const { supabase, isMentor, isCreator } = await requireCircleAccess(circleId);
 
-    const [{ data: circleWithMentor, error: circleError }, { data: sessions, error: sessionsError }, { data: resources, error: resourcesError }, { data: posts, error: postsError }] =
+    const [{ data: circleWithMentor, error: circleError }, { data: sessions, error: sessionsError }, { data: resources, error: resourcesError }, { data: posts, error: postsError }, { data: changeRequests, error: changeRequestsError }] =
         await Promise.all([
             supabase.from("Circle").select("*, User!Circle_mentorId_fkey(name, email)").eq("id", circleId).single(),
             supabase.from("CircleSession").select("*").eq("circleId", circleId).order("scheduledAt", { ascending: true }),
             supabase.from("Resource").select("*, User!Resource_addedById_fkey(name)").eq("circleId", circleId).order("createdAt", { ascending: false }),
             supabase.from("DiscussionPost").select("*, User!DiscussionPost_authorId_fkey(name)").eq("circleId", circleId).is("parentId", null).order("createdAt", { ascending: false }),
+            supabase
+                .from("CircleChangeRequest")
+                .select("id, newMaxCapacity, newDurationWeeks, notes, status, creatorApproved, mentorApproved, proposedById, createdAt, User!CircleChangeRequest_proposedById_fkey(name)")
+                .eq("circleId", circleId)
+                .eq("status", "PENDING")
+                .order("createdAt", { ascending: false }),
         ]);
 
     let circle = circleWithMentor;
@@ -152,11 +274,46 @@ export async function getCircleRoom(circleId: string) {
         }
     }
 
+    let safeChangeRequests: CircleChangeRequestRow[] = (changeRequests ?? []) as CircleChangeRequestRow[];
+    if (changeRequestsError) {
+        if (!isRecoverableRoomSchemaError(changeRequestsError)) throw changeRequestsError;
+        const { data: fallbackRequests, error: fallbackRequestsError } = await supabase
+            .from("CircleChangeRequest")
+            .select("id, newMaxCapacity, newDurationWeeks, notes, status, creatorApproved, mentorApproved, proposedById, createdAt")
+            .eq("circleId", circleId)
+            .eq("status", "PENDING")
+            .order("createdAt", { ascending: false });
+
+        if (fallbackRequestsError) {
+            if (!isRecoverableRoomSchemaError(fallbackRequestsError)) throw fallbackRequestsError;
+            safeChangeRequests = [];
+        } else {
+            safeChangeRequests = (fallbackRequests ?? []).map((item) => ({ ...item, User: null })) as CircleChangeRequestRow[];
+        }
+    }
+
     if (!circle) {
         throw createCircleAccessError("NOT_FOUND", "Circle not found.");
     }
 
-    return { circle, sessions: safeSessions, resources: safeResources, posts: safePosts, isMentor };
+    const normalizedChangeRequests = safeChangeRequests.map((item) => {
+        const userRelation = (item as { User?: unknown }).User;
+        const normalizedUser = Array.isArray(userRelation) ? (userRelation[0] ?? null) : (userRelation ?? null);
+        return {
+            ...item,
+            User: normalizedUser as { name: string } | null,
+        };
+    });
+
+    return {
+        circle,
+        sessions: safeSessions,
+        resources: safeResources,
+        posts: safePosts,
+        changeRequests: normalizedChangeRequests,
+        isMentor,
+        isCreator,
+    };
 }
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
@@ -177,7 +334,7 @@ export async function addSession(circleId: string, data: {
         createdAt: new Date().toISOString(),
     });
     if (error) throw error;
-    revalidatePath(`/circles/${circleId}`);
+    revalidateCirclePaths(circleId);
 }
 
 export async function markSessionComplete(sessionId: string, circleId: string, notes: string) {
@@ -195,7 +352,7 @@ export async function markSessionComplete(sessionId: string, circleId: string, n
         throw createCircleAccessError("NOT_FOUND", "Session not found.");
     }
 
-    revalidatePath(`/circles/${circleId}`);
+    revalidateCirclePaths(circleId);
 }
 
 // ─── Resources ────────────────────────────────────────────────────────────────
@@ -216,7 +373,7 @@ export async function addResource(circleId: string, data: {
         createdAt: new Date().toISOString(),
     });
     if (error) throw error;
-    revalidatePath(`/circles/${circleId}`);
+    revalidateCirclePaths(circleId);
 }
 
 export async function deleteResource(resourceId: string, circleId: string) {
@@ -243,7 +400,7 @@ export async function deleteResource(resourceId: string, circleId: string) {
         .eq("circleId", circleId);
 
     if (error) throw error;
-    revalidatePath(`/circles/${circleId}`);
+    revalidateCirclePaths(circleId);
 }
 
 // ─── Discussion ───────────────────────────────────────────────────────────────
@@ -276,5 +433,188 @@ export async function postDiscussion(circleId: string, content: string, parentId
         createdAt: new Date().toISOString(),
     });
     if (error) throw error;
-    revalidatePath(`/circles/${circleId}`);
+    revalidateCirclePaths(circleId);
+}
+
+// ─── Circle Change Requests ───────────────────────────────────────────────────
+
+export async function proposeCircleUpdate(circleId: string, data: {
+    newMaxCapacity?: number | null;
+    extendByWeeks?: number | null;
+    notes?: string;
+}) {
+    const { supabase, isMentor, isCreator, circle } = await requireCircleAccess(circleId);
+    if (!isMentor && !isCreator) {
+        throw createCircleAccessError("FORBIDDEN", "Only the organizer or mentor can propose circle changes.");
+    }
+
+    const maxValue = typeof data.newMaxCapacity === "number" ? Math.floor(data.newMaxCapacity) : null;
+    const extendByWeeks = typeof data.extendByWeeks === "number" ? Math.floor(data.extendByWeeks) : 0;
+    const newMaxCapacity = maxValue !== null ? maxValue : null;
+    const newDurationWeeks = extendByWeeks > 0 ? circle.durationWeeks + extendByWeeks : null;
+    const notes = data.notes?.trim() || null;
+
+    if (newMaxCapacity === null && newDurationWeeks === null) {
+        throw new Error("Provide at least one change: increase capacity and/or extend duration.");
+    }
+    if (newMaxCapacity !== null && newMaxCapacity <= circle.maxCapacity) {
+        throw new Error(`Capacity must be greater than current capacity (${circle.maxCapacity}).`);
+    }
+    if (newDurationWeeks !== null && newDurationWeeks <= circle.durationWeeks) {
+        throw new Error("Duration extension must add at least one week.");
+    }
+
+    if (newMaxCapacity !== null) {
+        const filledCount = await getFilledApplicationCount(supabase, circleId);
+        if (newMaxCapacity < filledCount) {
+            throw new Error(`Capacity cannot be less than current enrolled count (${filledCount}).`);
+        }
+    }
+
+    const requiresDualApproval = Boolean(circle.mentorId) && circle.creatorId !== circle.mentorId;
+    if (!requiresDualApproval) {
+        await applyCircleValues(supabase, circleId, { newMaxCapacity, newDurationWeeks });
+        revalidateCirclePaths(circleId);
+        return {
+            status: "APPLIED" as const,
+            message: "Circle changes applied.",
+        };
+    }
+
+    const { data: pendingRequests, error: pendingError } = await supabase
+        .from("CircleChangeRequest")
+        .select("id, newMaxCapacity, newDurationWeeks, creatorApproved, mentorApproved, notes")
+        .eq("circleId", circleId)
+        .eq("status", "PENDING")
+        .order("createdAt", { ascending: false });
+
+    if (pendingError) throw pendingError;
+
+    const existingRequest = (pendingRequests ?? []).find((request) =>
+        (request.newMaxCapacity ?? null) === (newMaxCapacity ?? null)
+        && (request.newDurationWeeks ?? null) === (newDurationWeeks ?? null),
+    );
+
+    const creatorApproved = isCreator || Boolean(existingRequest?.creatorApproved);
+    const mentorApproved = isMentor || Boolean(existingRequest?.mentorApproved);
+    const now = new Date().toISOString();
+
+    let requestId: string;
+    if (existingRequest) {
+        requestId = existingRequest.id;
+        const { error: updateError } = await supabase
+            .from("CircleChangeRequest")
+            .update({
+                creatorApproved,
+                mentorApproved,
+                notes: notes ?? existingRequest.notes ?? null,
+                updatedAt: now,
+            })
+            .eq("id", existingRequest.id);
+        if (updateError) throw updateError;
+    } else {
+        requestId = crypto.randomUUID();
+        const { error: createError } = await supabase.from("CircleChangeRequest").insert({
+            id: requestId,
+            circleId,
+            proposedById: isCreator ? circle.creatorId : (circle.mentorId ?? circle.creatorId),
+            newMaxCapacity,
+            newDurationWeeks,
+            notes,
+            status: "PENDING",
+            creatorApproved,
+            mentorApproved,
+            createdAt: now,
+            updatedAt: now,
+        });
+        if (createError) throw createError;
+    }
+
+    if (creatorApproved && mentorApproved) {
+        await applyCircleValues(supabase, circleId, { newMaxCapacity, newDurationWeeks });
+        const { error: completeError } = await supabase
+            .from("CircleChangeRequest")
+            .update({ status: "APPLIED", updatedAt: now })
+            .eq("id", requestId);
+        if (completeError) throw completeError;
+
+        revalidateCirclePaths(circleId);
+        return {
+            status: "APPLIED" as const,
+            message: "Both approvals received. Circle changes applied.",
+        };
+    }
+
+    revalidateCirclePaths(circleId);
+    return {
+        status: "PENDING" as const,
+        message: "Change request recorded. Waiting for the other approver.",
+        pendingFor: creatorApproved ? "MENTOR" as const : "ORGANIZER" as const,
+    };
+}
+
+export async function approveCircleUpdateRequest(circleId: string, requestId: string) {
+    const { supabase, isMentor, isCreator, circle } = await requireCircleAccess(circleId);
+    if (!isMentor && !isCreator) {
+        throw createCircleAccessError("FORBIDDEN", "Only the organizer or mentor can approve this request.");
+    }
+
+    const { data: request, error } = await supabase
+        .from("CircleChangeRequest")
+        .select("id, newMaxCapacity, newDurationWeeks, creatorApproved, mentorApproved, status")
+        .eq("id", requestId)
+        .eq("circleId", circleId)
+        .maybeSingle();
+
+    if (error) throw error;
+    if (!request || request.status !== "PENDING") {
+        throw createCircleAccessError("NOT_FOUND", "Pending change request not found.");
+    }
+
+    const creatorApproved = request.creatorApproved || isCreator;
+    const mentorApproved = request.mentorApproved || isMentor;
+    const now = new Date().toISOString();
+
+    const { error: approveError } = await supabase
+        .from("CircleChangeRequest")
+        .update({
+            creatorApproved,
+            mentorApproved,
+            updatedAt: now,
+        })
+        .eq("id", requestId);
+    if (approveError) throw approveError;
+
+    if (creatorApproved && mentorApproved) {
+        if (request.newMaxCapacity !== null && request.newMaxCapacity < circle.maxCapacity) {
+            throw new Error("Requested capacity is lower than current capacity. Create a new request.");
+        }
+        if (request.newDurationWeeks !== null && request.newDurationWeeks < circle.durationWeeks) {
+            throw new Error("Requested duration is lower than current duration. Create a new request.");
+        }
+
+        if (request.newMaxCapacity !== null) {
+            const filledCount = await getFilledApplicationCount(supabase, circleId);
+            if (request.newMaxCapacity < filledCount) {
+                throw new Error(`Requested capacity is below current enrolled count (${filledCount}).`);
+            }
+        }
+
+        await applyCircleValues(supabase, circleId, {
+            newMaxCapacity: request.newMaxCapacity,
+            newDurationWeeks: request.newDurationWeeks,
+        });
+
+        const { error: completeError } = await supabase
+            .from("CircleChangeRequest")
+            .update({ status: "APPLIED", updatedAt: now })
+            .eq("id", requestId);
+        if (completeError) throw completeError;
+
+        revalidateCirclePaths(circleId);
+        return { status: "APPLIED" as const };
+    }
+
+    revalidateCirclePaths(circleId);
+    return { status: "PENDING" as const };
 }

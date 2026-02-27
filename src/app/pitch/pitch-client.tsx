@@ -43,6 +43,7 @@ export default function PitchClient({
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [selectedMentorId, setSelectedMentorId] = useState<string | null>(null);
     const [capacity, setCapacity] = useState("10");
+    const [durationWeeks, setDurationWeeks] = useState("4");
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [submitted, setSubmitted] = useState(false);
@@ -127,6 +128,7 @@ export default function PitchClient({
                     formData.set("title", title);
                     formData.set("description", description);
                     formData.set("capacity", capacity);
+                    formData.set("durationWeeks", durationWeeks);
                     const id = await createCircle(formData, userId);
                     router.push(`/circles/${id}`);
                     router.refresh();
@@ -151,6 +153,7 @@ export default function PitchClient({
                     formData.set("title", title);
                     formData.set("description", description);
                     formData.set("capacity", capacity);
+                    formData.set("durationWeeks", durationWeeks);
                     await createCircle(formData, userId, { asDraft: true });
                 } else {
                     await savePitchDraft({
@@ -313,19 +316,35 @@ export default function PitchClient({
                             </div>
                         </div>
                         {pitchMode === "MENTOR" && (
-                            <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                                    Max Participants <span className="text-rose-500">*</span>
-                                </label>
-                                <select
-                                    value={capacity}
-                                    onChange={(e) => setCapacity(e.target.value)}
-                                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900"
-                                >
-                                    {[5, 8, 10, 12, 15].map((n) => (
-                                        <option key={n} value={String(n)}>{n} participants</option>
-                                    ))}
-                                </select>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                                        Max Participants <span className="text-rose-500">*</span>
+                                    </label>
+                                    <select
+                                        value={capacity}
+                                        onChange={(e) => setCapacity(e.target.value)}
+                                        className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900"
+                                    >
+                                        {[5, 8, 10, 12, 15].map((n) => (
+                                            <option key={n} value={String(n)}>{n} participants</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                                        Duration (weeks) <span className="text-rose-500">*</span>
+                                    </label>
+                                    <select
+                                        value={durationWeeks}
+                                        onChange={(e) => setDurationWeeks(e.target.value)}
+                                        className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900"
+                                    >
+                                        {[2, 4, 6, 8].map((w) => (
+                                            <option key={w} value={String(w)}>{w} weeks</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         )}
                     </div>

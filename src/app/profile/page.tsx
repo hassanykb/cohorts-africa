@@ -2,7 +2,7 @@ import { getUser } from "@/lib/get-user";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Mail, Award, ExternalLink } from "lucide-react";
-import { getDefaultDashboardPath } from "@/lib/roles";
+import { getDefaultDashboardPath, getRoleLabel } from "@/lib/roles";
 import AppNavbar from "@/components/AppNavbar";
 
 function initials(name: string) {
@@ -12,6 +12,7 @@ function initials(name: string) {
 export default async function ProfilePage() {
     const user = await getUser();
     if (!user) redirect("/login");
+    const roleLabel = getRoleLabel(user.role);
 
     const scoreColor =
         user.reputationScore >= 80 ? "text-emerald-600 bg-emerald-100"
@@ -49,7 +50,7 @@ export default async function ProfilePage() {
                                 <Award className="w-3.5 h-3.5 mr-1" /> {user.reputationScore} pts
                             </span>
                             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
-                                {user.role}
+                                {roleLabel}
                             </span>
                         </div>
 
