@@ -21,7 +21,7 @@ export async function updateProfile(userId: string, data: {
                 bio: data.bio,
                 linkedinUrl: data.linkedinUrl || null,
                 avatarUrl: data.avatarUrl || null,
-                role: data.role === "BOTH" ? "SPONSOR" : data.role, // Mapping BOTH to SPONSOR as a fallback for the DB
+                role: data.role === "BOTH" ? "MENTEE" : data.role, // Fallback to MENTEE if BOTH isn't in DB yet
                 updatedAt: new Date().toISOString(),
             })
             .eq("id", userId);

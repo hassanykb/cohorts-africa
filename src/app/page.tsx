@@ -23,7 +23,7 @@ export default function Home() {
               <Link href="#enterprise" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Enterprise</Link>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/login" className="text-sm font-medium bg-slate-100 text-slate-700 px-5 py-2.5 rounded-full hover:bg-slate-200 transition-all">
+              <Link href="/login" className="text-sm font-medium bg-slate-100 text-slate-700 px-5 py-2.5 rounded-full hover:bg-slate-200 transition-all cursor-pointer">
                 Log in
               </Link>
               <Link href="/signup" className="text-sm font-medium bg-indigo-600 text-white px-5 py-2.5 rounded-full hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 hover:shadow-md hover:shadow-indigo-300">
