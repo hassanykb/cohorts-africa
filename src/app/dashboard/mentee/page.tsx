@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import {
     Globe2, ShieldCheck, BookOpen, Clock, CheckCircle,
     AlertCircle, ArrowRight, PlusCircle, Trophy,
+    Linkedin, Share2,
 } from "lucide-react";
 import { getUser } from "@/lib/get-user";
 import { getApplicationsByMentee } from "@/lib/actions";
@@ -65,7 +66,7 @@ export default async function MenteeDashboard() {
                         <h1 className="text-3xl font-extrabold text-slate-900">Welcome, {firstName} 👋</h1>
                         <p className="text-slate-500 mt-1">Your active circles and applications at a glance.</p>
                     </div>
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 min-w-[200px]">
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 min-w-[250px]">
                         <div className="flex items-center justify-between mb-2">
                             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1">
                                 <Trophy className="w-3.5 h-3.5 text-amber-500" /> Reputation Score
@@ -75,7 +76,22 @@ export default async function MenteeDashboard() {
                         <div className="w-full bg-slate-100 rounded-full h-2">
                             <div className={`h-2 rounded-full transition-all ${score.bar}`} style={{ width: `${user.reputationScore}%` }} />
                         </div>
-                        <p className="text-xs text-slate-400 mt-1.5">{score.label}</p>
+                        <p className="text-xs text-slate-400 mt-1.5 mb-3">{score.label}</p>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-[#0077B5] text-white text-[10px] font-bold hover:bg-[#006097] transition-colors"
+                                onClick={`window.open('https://www.linkedin.com/sharing/share-offsite/?url=https://cohorts-africa.vercel.app&summary=I just reached a reputation score of ${user.reputationScore} on Cohorts.Africa! 🚀', '_blank')` as any}
+                            >
+                                <Linkedin className="w-3 h-3" /> Share
+                            </button>
+                            <button
+                                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-black text-white text-[10px] font-bold hover:bg-slate-800 transition-colors"
+                                onClick={`window.open('https://twitter.com/intent/tweet?text=I just reached a reputation score of ${user.reputationScore} on Cohorts.Africa! 🚀 join me at https://cohorts-africa.vercel.app', '_blank')` as any}
+                            >
+                                <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.134l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg> Tweet
+                            </button>
+                        </div>
                     </div>
                 </div>
 

@@ -41,11 +41,15 @@ export async function getUser(): Promise<AppUser | null> {
         console.error("getUser: Silent upsert failure", e);
     }
 
-    const { data } = await supabase
+    const { data: userData, error: selectError } = await supabase
         .from("User")
         .select("*")
         .eq("id", userId)
         .single();
 
-    return data as AppUser | null;
+    if (selectError) {
+        console.error("getUser: Select failure", selectError);
+    }
+
+    return userData as AppUser | null;
 }
