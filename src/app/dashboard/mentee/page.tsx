@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { getUser } from "@/lib/get-user";
 import { getApplicationsByMentee } from "@/lib/actions";
+import ProfileMenu from "@/components/ProfileMenu";
 
 function initials(name: string) {
     return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
@@ -49,9 +50,12 @@ export default async function MenteeDashboard() {
                                 <ShieldCheck className="w-4 h-4" />
                                 {user.reputationScore} pts
                             </div>
-                            <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-sm shadow-sm">
-                                {initials(user.name)}
-                            </div>
+                            <ProfileMenu
+                                name={user.name}
+                                email={user.email}
+                                initials={initials(user.name)}
+                                role={user.role}
+                            />
                         </div>
                     </div>
                 </div>
