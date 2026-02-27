@@ -3,6 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase-server";
 
+const FILLED_APPLICATION_STATUSES = ["PENDING", "ACCEPTED"] as const;
+
+function countFilledApplications(applications: Array<{ status?: string | null }>): number {
+    return applications.filter((app) => FILLED_APPLICATION_STATUSES.includes((app.status ?? "") as (typeof FILLED_APPLICATION_STATUSES)[number])).length;
+}
+
+async function requireMentorCircleAccess(circleId: string, mentorId: string) {
+    const supabase = createServerClient();
+    const { data: circle, error } = await supabase
+        .from("Circle")
+        .select("id, mentorId, maxCapacity, status")
+        .eq("id", circleId)
+        .maybeSingle();
+
+    if (error) throw error;
+    if (!circle) throw new Error("Circle not found.");
+    if (circle.mentorId !== mentorId) throw new Error("You are not allowed to manage this circle.");
+    return { supabase, circle };
+}
+
 // ─── Circles ────────────────────────────────────────────────────────────────
 
 export async function getCircles() {
@@ -21,7 +41,7 @@ export async function getCirclesByMentor(mentorId: string) {
     const supabase = createServerClient();
     const { data, error } = await supabase
         .from("Circle")
-        .select("*, Application(id)")
+        .select("*, Application(id, status)")
         .eq("mentorId", mentorId)
         .order("createdAt", { ascending: false });
 
@@ -29,7 +49,7 @@ export async function getCirclesByMentor(mentorId: string) {
     return data ?? [];
 }
 
-export async function getPitchRequestsForMentor(mentorId: string) {
+export async function getPitchRequestsForMentor() {
     const supabase = createServerClient();
     const { data, error } = await supabase
         .from("Circle")
@@ -40,6 +60,36 @@ export async function getPitchRequestsForMentor(mentorId: string) {
 
     if (error) throw error;
     return data ?? [];
+}
+
+export async function getCircleForApplication(circleId: string) {
+    const supabase = createServerClient();
+    const [{ data: circle, error: circleError }, { data: applications, error: appError }] = await Promise.all([
+        supabase
+            .from("Circle")
+            .select("id, title, description, maxCapacity, status, User!Circle_mentorId_fkey(name)")
+            .eq("id", circleId)
+            .maybeSingle(),
+        supabase
+            .from("Application")
+            .select("status")
+            .eq("circleId", circleId),
+    ]);
+
+    if (circleError) throw circleError;
+    if (appError) throw appError;
+    if (!circle) return null;
+
+    const allApplications = (applications ?? []) as Array<{ status?: string | null }>;
+    const filled = countFilledApplications(allApplications);
+    const waitlistCount = allApplications.filter((app) => app.status === "WAITLIST").length;
+
+    return {
+        ...circle,
+        filled,
+        waitlistCount,
+        spotsLeft: Math.max((circle.maxCapacity ?? 0) - filled, 0),
+    };
 }
 
 export async function createCircle(formData: FormData, mentorId: string, options?: { asDraft?: boolean }) {
@@ -140,18 +190,140 @@ export async function submitApplication(circleId: string, menteeId: string, inte
     const supabase = createServerClient();
     const now = new Date().toISOString();
 
-    const { error } = await supabase.from("Application").insert({
-        id: crypto.randomUUID(),
-        circleId,
-        menteeId,
-        intentStatement,
-        status: "PENDING",
-        createdAt: now,
-        updatedAt: now,
-    });
+    const [{ data: circle, error: circleError }, { data: existing, error: existingError }, { data: allApplications, error: countError }] = await Promise.all([
+        supabase
+            .from("Circle")
+            .select("id, status, maxCapacity")
+            .eq("id", circleId)
+            .maybeSingle(),
+        supabase
+            .from("Application")
+            .select("id, status")
+            .eq("circleId", circleId)
+            .eq("menteeId", menteeId)
+            .maybeSingle(),
+        supabase
+            .from("Application")
+            .select("status")
+            .eq("circleId", circleId),
+    ]);
+
+    if (circleError) throw circleError;
+    if (existingError) throw existingError;
+    if (countError) throw countError;
+    if (!circle) throw new Error("Circle not found.");
+    if (!["OPEN", "ACTIVE"].includes(circle.status)) {
+        throw new Error("Applications are currently closed for this circle.");
+    }
+    if (existing && existing.status !== "REJECTED") {
+        throw new Error(`You already have an application for this circle (${existing.status}).`);
+    }
+
+    const filled = countFilledApplications((allApplications ?? []) as Array<{ status?: string | null }>);
+    const applicationStatus = filled >= (circle.maxCapacity ?? 0) ? "WAITLIST" : "PENDING";
+
+    if (existing?.status === "REJECTED") {
+        const { error } = await supabase
+            .from("Application")
+            .update({
+                intentStatement,
+                status: applicationStatus,
+                updatedAt: now,
+            })
+            .eq("id", existing.id);
+
+        if (error) {
+            if (applicationStatus === "WAITLIST" && error.message.includes("invalid input value for enum")) {
+                throw new Error("Waitlist status is not available in the database yet. Run the latest Supabase migration.");
+            }
+            throw error;
+        }
+    } else {
+        const { error } = await supabase.from("Application").insert({
+            id: crypto.randomUUID(),
+            circleId,
+            menteeId,
+            intentStatement,
+            status: applicationStatus,
+            createdAt: now,
+            updatedAt: now,
+        });
+
+        if (error) {
+            if (applicationStatus === "WAITLIST" && error.message.includes("invalid input value for enum")) {
+                throw new Error("Waitlist status is not available in the database yet. Run the latest Supabase migration.");
+            }
+            throw error;
+        }
+    }
+
+    if (applicationStatus === "PENDING" && filled + 1 >= (circle.maxCapacity ?? 0) && circle.status === "OPEN") {
+        const { error: closeError } = await supabase
+            .from("Circle")
+            .update({
+                status: "ACTIVE",
+                updatedAt: now,
+            })
+            .eq("id", circleId);
+        if (closeError) throw closeError;
+    }
+
+    revalidatePath("/dashboard/mentee");
+    revalidatePath("/dashboard/mentor");
+    revalidatePath("/explore");
+    return { status: applicationStatus as "PENDING" | "WAITLIST" };
+}
+
+export async function closeCircleApplications(circleId: string, mentorId: string) {
+    const now = new Date().toISOString();
+    const { supabase, circle } = await requireMentorCircleAccess(circleId, mentorId);
+    if (circle.status !== "OPEN") return;
+
+    const { error } = await supabase
+        .from("Circle")
+        .update({
+            status: "ACTIVE",
+            updatedAt: now,
+        })
+        .eq("id", circleId);
 
     if (error) throw error;
-    revalidatePath("/dashboard/mentee");
+    revalidatePath("/dashboard/mentor");
+    revalidatePath("/explore");
+    revalidatePath(`/circles/${circleId}`);
+}
+
+export async function reopenCircleApplications(circleId: string, mentorId: string) {
+    const now = new Date().toISOString();
+    const { supabase, circle } = await requireMentorCircleAccess(circleId, mentorId);
+    if (circle.status === "OPEN") return;
+    if (circle.status === "COMPLETED") {
+        throw new Error("Completed circles cannot be reopened.");
+    }
+
+    const { data: applications, error: appError } = await supabase
+        .from("Application")
+        .select("status")
+        .eq("circleId", circleId);
+
+    if (appError) throw appError;
+    const filled = countFilledApplications((applications ?? []) as Array<{ status?: string | null }>);
+    if (filled >= (circle.maxCapacity ?? 0)) {
+        throw new Error("Circle is already at capacity. Increase capacity or move someone to waitlist before reopening.");
+    }
+
+    const { error } = await supabase
+        .from("Circle")
+        .update({
+            status: "OPEN",
+            updatedAt: now,
+        })
+        .eq("id", circleId);
+
+    if (error) throw error;
+    revalidatePath("/dashboard/mentor");
+    revalidatePath("/explore");
+    revalidatePath(`/circles/${circleId}`);
 }
 
 // ─── Pitches (Mentee-Initiated Circles) ───────────────────────────────────

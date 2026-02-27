@@ -6,7 +6,7 @@ import {
     Linkedin,
 } from "lucide-react";
 import { getUser } from "@/lib/get-user";
-import { getCirclesByMentor, getPitchRequestsForMentor, acceptPitch, declinePitch } from "@/lib/actions";
+import { getCirclesByMentor, getPitchRequestsForMentor, acceptPitch, closeCircleApplications, declinePitch, reopenCircleApplications } from "@/lib/actions";
 import { isMentorRole } from "@/lib/roles";
 import AppNavbar from "@/components/AppNavbar";
 
@@ -17,7 +17,7 @@ export default async function MentorDashboard() {
 
     const [circles, pitches] = await Promise.all([
         getCirclesByMentor(user.id),
-        getPitchRequestsForMentor(user.id),
+        getPitchRequestsForMentor(),
     ]);
 
     const active = circles.filter((c: Record<string, unknown>) => c.status === "ACTIVE" || c.status === "OPEN");
@@ -95,9 +95,13 @@ export default async function MentorDashboard() {
                         ) : (
                             <div className="space-y-4">
                                 {circles.map((circle: Record<string, unknown>) => {
-                                    const apps = (circle.Application as unknown[])?.length ?? 0;
+                                    const applications = (circle.Application as Array<{ status?: string }>) ?? [];
+                                    const filledApps = applications.filter((app) => app.status === "PENDING" || app.status === "ACCEPTED").length;
+                                    const waitlistedApps = applications.filter((app) => app.status === "WAITLIST").length;
                                     const status = circle.status as string;
                                     const statusLabel = status;
+                                    const maxCapacity = circle.maxCapacity as number;
+                                    const canReopen = status === "ACTIVE" && filledApps < maxCapacity;
                                     return (
                                         <div key={circle.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-start justify-between hover:shadow-md transition-shadow">
                                             <div className="flex-1 min-w-0">
@@ -111,8 +115,14 @@ export default async function MentorDashboard() {
                                                 <div className="flex items-center gap-3 text-sm text-slate-500">
                                                     <span className="flex items-center gap-1">
                                                         <Users className="w-3.5 h-3.5" />
-                                                        {apps}/{circle.maxCapacity as number} mentees
+                                                        {filledApps}/{maxCapacity} mentees
                                                     </span>
+                                                    {waitlistedApps > 0 && (
+                                                        <>
+                                                            <span className="text-slate-300">•</span>
+                                                            <span>{waitlistedApps} waitlisted</span>
+                                                        </>
+                                                    )}
                                                     {status === "ACTIVE" && (
                                                         <>
                                                             <span className="text-slate-300">•</span>
@@ -123,10 +133,33 @@ export default async function MentorDashboard() {
                                                     )}
                                                 </div>
                                             </div>
-                                            <Link href={`/circles/${circle.id as string}`}
-                                                className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors ml-4 flex-shrink-0">
-                                                <ArrowRight className="w-4 h-4" />
-                                            </Link>
+                                            <div className="ml-4 flex-shrink-0 flex flex-col items-end gap-2">
+                                                <Link href={`/circles/${circle.id as string}`}
+                                                    className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
+                                                    <ArrowRight className="w-4 h-4" />
+                                                </Link>
+                                                {status === "OPEN" && (
+                                                    <form>
+                                                        <button
+                                                            formAction={async () => { "use server"; await closeCircleApplications(circle.id as string, user.id); }}
+                                                            className="px-2.5 py-1 text-[11px] font-semibold rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                        >
+                                                            Close Apps
+                                                        </button>
+                                                    </form>
+                                                )}
+                                                {status === "ACTIVE" && (
+                                                    <form>
+                                                        <button
+                                                            disabled={!canReopen}
+                                                            formAction={async () => { "use server"; await reopenCircleApplications(circle.id as string, user.id); }}
+                                                            className="px-2.5 py-1 text-[11px] font-semibold rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                        >
+                                                            Reopen Apps
+                                                        </button>
+                                                    </form>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })}

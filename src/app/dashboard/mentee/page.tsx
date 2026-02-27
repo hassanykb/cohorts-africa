@@ -40,6 +40,7 @@ export default async function MenteeDashboard() {
     const drafts = draftsResult.status === "fulfilled" ? draftsResult.value : [];
 
     const active = applications.filter((a: Record<string, unknown>) => a.status === "ACCEPTED");
+    const waitlisted = applications.filter((a: Record<string, unknown>) => a.status === "WAITLIST");
     const pending = applications.filter((a: Record<string, unknown>) => a.status === "PENDING" || a.status === "REJECTED");
     const score = scoreColor(user.reputationScore);
     const firstName = user.name?.split(" ")[0] ?? "there";
@@ -188,6 +189,37 @@ export default async function MenteeDashboard() {
                                                 </div>
                                                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${status === "PENDING" ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>
                                                     {status}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </section>
+
+                        <section>
+                            <h2 className="text-xl font-bold text-slate-900 mb-4">My Waitlist</h2>
+                            {waitlisted.length === 0 ? (
+                                <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-400 text-sm">
+                                    You are not waitlisted for any circles.
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {waitlisted.map((app: Record<string, unknown>) => {
+                                        const circle = app.Circle as Record<string, unknown> | null;
+                                        return (
+                                            <div key={app.id as string} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center justify-between">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-amber-100">
+                                                        <Clock className="w-4 h-4 text-amber-600" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-slate-800">{circle?.title as string ?? "Circle"}</p>
+                                                        <p className="text-xs text-slate-500">Waitlisted · {new Date(app.createdAt as string).toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+                                                    WAITLIST
                                                 </span>
                                             </div>
                                         );

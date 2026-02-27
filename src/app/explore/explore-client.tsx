@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Clock, Users, ArrowRight, Filter } from "lucide-react";
+import { Search, Clock, Users, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 interface Circle {
@@ -19,7 +19,7 @@ function initials(name?: string | null) {
     return name.split(" ").filter(Boolean).map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
 }
 
-export default function ExploreClient({ circles: initialCircles }: { circles: any[] }) {
+export default function ExploreClient({ circles: initialCircles }: { circles: Circle[] }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
@@ -82,11 +82,13 @@ export default function ExploreClient({ circles: initialCircles }: { circles: an
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredCircles.map((circle: any) => {
+                    {filteredCircles.map((circle) => {
                         const mentor = circle.User as { name: string } | null;
                         const isOpen = circle.status === "OPEN";
+                        const isActive = circle.status === "ACTIVE";
                         const isProposed = circle.status === "PROPOSED";
-                        const ctaHref = isOpen
+                        const allowApplication = isOpen || isActive;
+                        const ctaHref = allowApplication
                             ? `/circles/apply?circleId=${circle.id}`
                             : `/circles/${circle.id}`;
 
@@ -104,7 +106,7 @@ export default function ExploreClient({ circles: initialCircles }: { circles: an
                                             </span>
                                             <span className="text-sm text-slate-400 flex items-center gap-1">
                                                 <Clock className="w-3.5 h-3.5" />
-                                                {circle.status === "ACTIVE" ? "In Progress" : "Open"}
+                                                {circle.status === "ACTIVE" ? "Waitlist Open" : "Open"}
                                             </span>
                                         </div>
                                         <h3 className="text-xl font-bold text-slate-900 mb-2 leading-tight group-hover:text-indigo-600 transition-colors line-clamp-2">
@@ -128,11 +130,12 @@ export default function ExploreClient({ circles: initialCircles }: { circles: an
                                         <Link
                                             href={ctaHref}
                                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${isOpen
+                                                || isActive
                                                 ? "bg-indigo-600 text-white hover:bg-indigo-700"
                                                 : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
                                                 }`}
                                         >
-                                            {isOpen ? "Apply" : "Enter Room"} <ArrowRight className="w-3.5 h-3.5" />
+                                            {isOpen ? "Apply" : isActive ? "Join Waitlist" : "Enter Room"} <ArrowRight className="w-3.5 h-3.5" />
                                         </Link>
                                     </div>
                                 </div>
