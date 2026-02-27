@@ -99,17 +99,28 @@ export async function submitApplication(circleId: string, menteeId: string, inte
 
 export async function submitPitch(data: {
     creatorId: string;
+    mentorId: string;   // now required — must be a followed mentor
     title: string;
     description: string;
     tags: string[];
 }) {
     const supabase = createServerClient();
-    const now = new Date().toISOString();
 
+    // Guard: creatorId must follow mentorId
+    const { data: follow } = await supabase
+        .from("Follow")
+        .select("id")
+        .eq("followerId", data.creatorId)
+        .eq("mentorId", data.mentorId)
+        .single();
+
+    if (!follow) throw new Error("You must follow this mentor before pitching to them.");
+
+    const now = new Date().toISOString();
     const { error } = await supabase.from("Circle").insert({
         id: crypto.randomUUID(),
         creatorId: data.creatorId,
-        mentorId: null, // Awaiting mentor acceptance
+        mentorId: data.mentorId,
         title: data.title,
         description: data.description,
         maxCapacity: 10,
@@ -168,3 +179,54 @@ export async function declinePitch(circleId: string) {
     if (error) throw error;
     revalidatePath("/dashboard/mentor");
 }
+
+// ─── Follow / Unfollow ────────────────────────────────────────────────────────
+
+export type MentorWithFollow = {
+    id: string;
+    name: string;
+    email: string;
+    linkedinUrl: string | null;
+    bio: string | null;
+    isFollowing: boolean;
+};
+
+export async function getMentorsWithFollowStatus(viewerId: string): Promise<MentorWithFollow[]> {
+    const supabase = createServerClient();
+
+    const [{ data: mentors }, { data: follows }] = await Promise.all([
+        supabase.from("User").select("id, name, email, linkedinUrl, bio").eq("role", "MENTOR"),
+        supabase.from("Follow").select("mentorId").eq("followerId", viewerId),
+    ]);
+
+    const followedIds = new Set((follows ?? []).map((f: { mentorId: string }) => f.mentorId));
+
+    return (mentors ?? []).map((m: Omit<MentorWithFollow, "isFollowing">) => ({
+        ...m,
+        isFollowing: followedIds.has(m.id),
+    }));
+}
+
+export async function followMentor(followerId: string, mentorId: string) {
+    const supabase = createServerClient();
+    const { error } = await supabase.from("Follow").insert({
+        id: crypto.randomUUID(),
+        followerId,
+        mentorId,
+        createdAt: new Date().toISOString(),
+    });
+    if (error && !error.message.includes("duplicate")) throw error;
+    revalidatePath("/pitch");
+}
+
+export async function unfollowMentor(followerId: string, mentorId: string) {
+    const supabase = createServerClient();
+    const { error } = await supabase
+        .from("Follow")
+        .delete()
+        .eq("followerId", followerId)
+        .eq("mentorId", mentorId);
+    if (error) throw error;
+    revalidatePath("/pitch");
+}
+
