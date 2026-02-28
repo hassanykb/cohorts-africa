@@ -1,24 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { Globe2 } from "lucide-react";
+import Image from "next/image";
 
 type Props = {
     role?: string;
     className?: string;
+    variant?: "full" | "icon";
 };
 
-export default function BrandLogo({ role, className = "" }: Props) {
+export default function BrandLogo({ role, className = "", variant = "full" }: Props) {
     const href = role === "MENTOR" || role === "MENTEE" || role === "BOTH"
         ? "/explore"
         : "/";
 
     return (
-        <Link href={href} className={`font-bold text-xl flex items-center gap-2 ${className}`}>
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-                <Globe2 className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-slate-900">Cohorts Network</span>
+        <Link href={href} className={`flex items-center gap-2 ${className}`}>
+            {variant === "icon" ? (
+                <div className="relative w-8 h-8">
+                    <Image
+                        src="/favicon.png"
+                        alt="Cohorts Network Icon"
+                        fill
+                        className="object-contain"
+                    />
+                </div>
+            ) : (
+                <div className="relative w-40 h-10">
+                    <Image
+                        src="/logo.png"
+                        alt="Cohorts Network"
+                        fill
+                        className="object-contain object-left"
+                    />
+                </div>
+            )}
         </Link>
     );
 }

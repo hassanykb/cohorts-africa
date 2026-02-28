@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Users, Trophy, ShieldCheck, Globe2 } from "lucide-react";
+import { ArrowRight, Users, Trophy, ShieldCheck } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/get-user";
 
@@ -16,13 +17,8 @@ export default async function Home() {
       <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <div className="flex-shrink-0 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center">
-                <Globe2 className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-xl tracking-tight text-slate-900">
-                Cohorts Network
-              </span>
+            <div className="flex-shrink-0">
+              <BrandLogo />
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <Link href="#mentees" className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">For Mentees</Link>

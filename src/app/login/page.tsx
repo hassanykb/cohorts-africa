@@ -1,7 +1,8 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { Globe2, Linkedin } from "lucide-react";
+import { Linkedin } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function LoginPage() {
     return (
@@ -9,11 +10,8 @@ export default function LoginPage() {
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 mb-4">
-                        <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center">
-                            <Globe2 className="w-6 h-6 text-white" />
-                        </div>
-                        <span className="font-bold text-2xl text-slate-900">Cohorts Network</span>
+                    <div className="flex justify-center mb-4">
+                        <BrandLogo className="flex-col !gap-3" />
                     </div>
                     <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Welcome back</h1>
                     <p className="text-slate-500">Sign in to continue your journey</p>
